@@ -1,11 +1,14 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.F.Option;
 import java.util.Arrays;
 import java.util.Collection;
 import org.junit.Assert;
 import org.junit.Test;
 
 import static cx.ath.mancel01.utils.C.*;
+import static cx.ath.mancel01.utils.M.*;
+
 
 public class AppTest {
 
@@ -87,6 +90,76 @@ public class AppTest {
                 .execute(sum);
         Assert.assertEquals(15, sum.sum());
         Assert.assertEquals(5, sum.count());
+    }
+
+    @Test
+    public void testPatternMatching() {
+        String value = "foobar";
+        Option<String> matched =
+            M.match(value).andExcept(String.class).with(
+                caseEquals("one").then(new OneFunction()),
+                caseEquals("two").then(new TwoFunction()),
+                caseEquals("three").then(new ThreeFunction()),
+                otherCases().then(new OtherFunction())
+            );
+        Assert.assertEquals(matched.get(), "-1");
+        value = "one";
+        matched = M.match(value).andExcept(String.class).with(
+            caseEquals("one").then(new OneFunction()),
+            caseEquals("two").then(new TwoFunction()),
+            caseEquals("three").then(new ThreeFunction()),
+            otherCases().then(new OtherFunction())
+        );
+        Assert.assertEquals(matched.get(), "It's a one");
+        value = "two";
+        matched = M.match(value).andExcept(String.class).with(
+            caseEquals("one").then(new OneFunction()),
+            caseEquals("two").then(new TwoFunction()),
+            caseEquals("three").then(new ThreeFunction()),
+            otherCases().then(new OtherFunction())
+        );
+        Assert.assertEquals(matched.get(), "It's a two");
+        value = "three";
+        matched = M.match(value).andExcept(String.class).with(
+            caseEquals("one").then(new OneFunction()),
+            caseEquals("two").then(new TwoFunction()),
+            caseEquals("three").then(new ThreeFunction()),
+            otherCases().then(new OtherFunction())
+        );
+        Assert.assertEquals(matched.get(), "It's a three");
+
+    }
+
+    public class OneFunction implements MatchCaseFunction<String, String> {
+
+        @Override
+        public Option<String> apply(String value) {
+            return F.some("It's a one");
+        }
+    }
+
+    public class TwoFunction implements MatchCaseFunction<String, String> {
+
+        @Override
+        public Option<String> apply(String value) {
+            return F.some("It's a two");
+        }
+    }
+
+    public class ThreeFunction implements MatchCaseFunction<String, String> {
+
+        @Override
+        public Option<String> apply(String value) {
+            return F.some("It's a three");
+        }
+    }
+
+    public class OtherFunction implements MatchCaseFunction<String, String> {
+
+        @Override
+        public Option<String> apply(String value) {
+            return F.some("-1");
+        }
     }
 
     private class Sum implements Function<Integer> {

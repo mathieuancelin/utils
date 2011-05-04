@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 /**
- * Utilities for collections.
+ * Utilities for collections (inspired by Google Collections)
  *
  * @author Mathieu ANCELIN
  */
