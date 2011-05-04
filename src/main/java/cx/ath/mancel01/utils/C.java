@@ -15,11 +15,11 @@ public class C {
     }
 
     public static <T> Collection<T> filtered(Collection<T> collection, Predicate<T> predicate) {
-        return new EachImpl<T>(collection).filter(predicate).get();
+        return new EachImpl<T>(collection).filteredBy(predicate).get();
     }
 
     public static <T> Filterable<T> filter(Collection<T> collection, Predicate<T> predicate) {
-        return new EachImpl<T>(collection).filter(predicate);
+        return new EachImpl<T>(collection).filteredBy(predicate);
     }
 
     public static <T> Joiner join(Collection<T> collection) {
@@ -186,16 +186,20 @@ public class C {
     public static interface Each<T> extends Filterable<T> {
 
         @Override
-        Each<T> filter(Predicate<T> predicate);
+        Each<T> filteredBy(Predicate<T> predicate);
 
         Filterable<T> execute(Function<T> action);
 
-        Filterable<T> apply(Transformation<T> transformation);
+        <R> Filterable<R> apply(Transformation<T, R> transformation);
     }
 
     public static interface Joiner {
 
-        Joiner labelized(Transformation<String> tranformation);
+        <T> Joiner labelized(Transformation<T, String> tranformation);
+
+        Joiner before(String before);
+
+        Joiner after(String after);
 
         String with(String separator);
     }
@@ -210,14 +214,14 @@ public class C {
         void apply(T t);
     }
 
-    public static interface Transformation<T> {
+    public static interface Transformation<T, R> {
 
-        T apply(T t);
+        R apply(T t);
     }
 
     public static interface Filterable<T> {
         
-        Filterable<T> filter(Predicate<T> predicate);
+        Filterable<T> filteredBy(Predicate<T> predicate);
 
         Collection<T> get();
 
@@ -227,42 +231,67 @@ public class C {
 
     }
 
-    private static class JoinerImpl<T> implements Function<String>, Joiner {
+    private static class JoinerImpl implements Function, Joiner {
 
         private String separator;
 
         private final StringBuilder builder = new StringBuilder();
 
-        private final Collection<T> value;
+        private final Collection<?> value;
 
-        private Transformation lable = new Transformation<String>() {
+        private String before;
+
+        private String after;
+
+        private Transformation label = new Transformation<Object, String>() {
 
             @Override
-            public String apply(String t) {
-                throw new UnsupportedOperationException("Not supported yet.");
+            public String apply(Object t) {
+                return t.toString();
             }
         };
 
-        public JoinerImpl(Collection<T> value) {
+        public JoinerImpl(Collection<?> value) {
             this.value = value;
         }
 
         @Override
-        public void apply(String t) {
-            throw new UnsupportedOperationException("Not supported yet.");
+        public void apply(Object t) {
+            builder.append(label.apply(t));
+            builder.append(separator);
         }
 
         @Override
         public String with(String separator) {
             this.separator = separator;
-            forEach(value).execute((Function<T>) this);
+            if (before != null) {
+                builder.append(before);
+            }
+            forEach(value).execute((Function) this);
+            if (before != null) {
+                builder.append(after);
+            }
             String finalValue = builder.toString();
-            return finalValue.substring(0, finalValue.lastIndexOf(separator));
+            return finalValue.substring(0, finalValue.lastIndexOf(separator))
+                    + finalValue.substring(finalValue.lastIndexOf(separator) + separator.length());
         }
 
         @Override
-        public Joiner labelized(Transformation<String> tranformation) {
-            throw new UnsupportedOperationException("Not supported yet.");
+        public <R> Joiner labelized(Transformation<R, String> tranformation) {
+            this.label = tranformation;
+            return this;
+        }
+
+        @Override
+        public Joiner before(String before) {
+            this.before = before;
+            return this;
+        }
+
+        @Override
+        public Joiner after(String after) {
+            this.after = after;
+            return this;
         }
     }
 
@@ -278,7 +307,7 @@ public class C {
         }
 
         @Override
-        public Each<T> filter(Predicate<T> predicate) {
+        public Each<T> filteredBy(Predicate<T> predicate) {
             initWorkingCollection();
             Collection<T> tmp = new ArrayList<T>();
             for (T element : workingCollection) {
@@ -311,17 +340,18 @@ public class C {
         }
 
         @Override
-        public Filterable<T> apply(Transformation<T> transformation) {
+        public <R> Filterable<R> apply(Transformation<T, R> transformation) {
             initWorkingCollection();
-            Collection<T> tmp = new ArrayList<T>();
+            Collection<R> tmp = new ArrayList<R>();
             for (T element : workingCollection) {
                 tmp.add(transformation.apply(element));
             }
-            workingCollection = tmp;
-            return this;
+//            workingCollection = tmp;
+//            return this;
+            return new EachImpl<R>(tmp);
         }
 
-                @Override
+        @Override
         public Collection<T> get() {
             return workingCollection;
         }
