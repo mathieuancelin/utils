@@ -100,6 +100,29 @@ public class F {
         }
     }
 
+    public static class Any<T> extends Some<Object> {
+
+        public Any(T value) {
+            super(value);
+        }
+
+        public Class<?> type() {
+            return value.getClass();
+        }
+
+        public boolean isTyped(Class<?> type) {
+            return type.isAssignableFrom(type());
+        }
+
+        public <A> Option<A> typed(Class<A> type) {
+            if (isTyped(type)) {
+                return F.some(type.cast(value));
+            } else {
+                return (Option<A>) F.none;
+            }
+        }
+    }
+
     public static class Either<A, B> {
 
         final public Option<A> _1;
