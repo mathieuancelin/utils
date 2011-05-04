@@ -6,13 +6,13 @@ import java.util.Iterator;
 /**
  * Utilities for everyday stuff.
  * 
- * Higly inspired (copy) by : https://github.com/playframework/play/blob/master/framework/src/play/libs/F.java
+ * Higly inspired by : https://github.com/playframework/play/blob/master/framework/src/play/libs/F.java
  *
  * @author Mathieu ANCELIN
  */
 public class F {
 
-    final static None<Object> None = new None<Object>();
+    private final static None<Object> None = new None<Object>();
 
     public static abstract class Option<T> implements Iterable<T> {
 

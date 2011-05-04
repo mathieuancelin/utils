@@ -58,7 +58,6 @@ public class C {
             }
         };
     }
-    
     public static Predicate<String> notEq(final String value) {
         return new Predicate<String>() {
             @Override
@@ -91,7 +90,6 @@ public class C {
             }
         };
     }
-    
     public static Predicate<Object> isNull(final Object value) {
         return new Predicate<Object>() {
             @Override
@@ -108,7 +106,6 @@ public class C {
             }
         };
     }
-    
     public static Predicate<String> match(final String regexp) {
         return new Predicate<String>() {
             @Override
@@ -117,7 +114,6 @@ public class C {
             }
         };
     }
-    
     public static Predicate<Integer> greaterThan(final int value) {
         return new Predicate<Integer>() {
             @Override
@@ -346,8 +342,6 @@ public class C {
             for (T element : workingCollection) {
                 tmp.add(transformation.apply(element));
             }
-//            workingCollection = tmp;
-//            return this;
             return new EachImpl<R>(tmp);
         }
 
