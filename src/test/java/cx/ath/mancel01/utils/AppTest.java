@@ -308,22 +308,26 @@ public class AppTest {
         Option<Method> m2 = method(AppTest.class, "concat",
                     Integer.class, String.class, Long.class);
         if (m.isDefined()) {
-            String value = curry(m.get(), this, String.class)
+            String value = curry(m, this, String.class)
                     ._("A")._("B")._("C")
                     .apply();
 
             String expected = "ABC";
             Assert.assertEquals(expected, value);
 
-            CurryFunction<String> function = curry(m.get(), this, String.class)
+            CurryFunction<String> function =
+                curry(m, this, String.class)
                     ._("A")._("B");
-            String value2 = function
+            String value2 =
+                function
                     ._("C")
                     .apply();
-            String value22 = function
+            String value22 =
+                function
                     ._("D")
                     .apply();
-            String value222 = function
+            String value222 =
+                function
                     ._("E")
                     .apply();
 
@@ -331,15 +335,18 @@ public class AppTest {
             Assert.assertEquals("ABD", value22);
             Assert.assertEquals("ABE", value222);
 
-            String value3 = new MyCurryFunction()
+            String value3 =
+                new MyCurryFunction()
                     ._("A")._("B")._("C")
                     .apply();
             
             Assert.assertEquals(expected, value3);
 
-            CurryFunction<String> function2 = new MyCurryFunction()
+            CurryFunction<String> function2 =
+                new MyCurryFunction()
                     ._("A");
-            String value4 = function2
+            String value4 =
+                function2
                     ._("B")._("C")
                     .apply();
 
@@ -348,9 +355,11 @@ public class AppTest {
             Assert.fail("Method not defined");
         }
         if (m2.isDefined()) {
-            CurryFunction<String> function = curry(m2.get(), this, String.class)
+            CurryFunction<String> function =
+                curry(m2, this, String.class)
                     ._(new Long(3))._("2");
-            String value5 = function
+            String value5 =
+                function
                     ._(1)
                     .apply();
             
