@@ -300,7 +300,7 @@ public class AppTest {
     @Test
     public void curryTest() {
         Option<Method> m = method(AppTest.class, "concat", String.class, String.class, String.class);
-        Option<Method> m2 = method(AppTest.class, "concat", Integer.class, String.class, String.class);
+        Option<Method> m2 = method(AppTest.class, "concat", Integer.class, String.class, Long.class);
         if (m.isDefined()) {
             String value = curry(m.get(), this, String.class)._("A")._("B")._("C").apply();
             String expected = "ABC";
@@ -320,7 +320,7 @@ public class AppTest {
             Assert.fail("Method not defined");
         }
         if (m2.isDefined()) {
-            CurryFunction<String> function = curry(m2.get(), this, String.class)._("2")._("3");
+            CurryFunction<String> function = curry(m2.get(), this, String.class)._(new Long(3))._("2");
             String value5 = function._(1).apply();
             String expected = "123";
             Assert.assertEquals(expected, value5);
@@ -348,8 +348,8 @@ public class AppTest {
         return s1.concat(s2).concat(s3);
     }
 
-    public String concat(Integer s1, String s2, String s3) {
-        return ("" + s1).concat(s2).concat(s3);
+    public String concat(Integer s1, String s2, Long s3) {
+        return ("" + s1).concat(s2).concat("" + s3);
     }
 
     public class OneFunction implements MatchCaseFunction<String, String> {
