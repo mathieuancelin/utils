@@ -16,8 +16,10 @@ public class AppTest {
 
     @Test
     public void testCollections() {
-        Collection<String> values = Arrays.asList(new String[] {"Hello", "dude", ",", "how", "are", "you", "today", "!"});
-        Collection<String> expected = Arrays.asList(new String[] {"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
+        Collection<String> values = Arrays.asList(new String[]
+            {"Hello", "dude", ",", "how", "are", "you", "today", "!"});
+        Collection<String> expected = Arrays.asList(new String[]
+            {"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
         Collection<String> result = 
             forEach(values)
                 .apply(new Transformation<String, String>() {
@@ -55,7 +57,8 @@ public class AppTest {
 
     @Test
     public void testTransformation() {
-        Collection<Person> values = Arrays.asList(new Person[] {new Person("John", "Doe"), new Person("John", "Adams")});
+        Collection<Person> values = Arrays.asList(new Person[]
+            {new Person("John", "Doe"), new Person("John", "Adams")});
         Collection<String> expected = Arrays.asList(new String[] {"John", "John"}); 
         String expected1 = "John | John";
         Collection<String> transformed = forEach(values).apply(new Transformation<Person, String>() {
@@ -76,7 +79,8 @@ public class AppTest {
 
     @Test
     public void testCollections2() {
-        Collection<Integer> values = Arrays.asList(new Integer[] {1, 2, 3, 4, 5, 6, -8, -2, -1, -28});
+        Collection<Integer> values = Arrays.asList(new Integer[]
+            {1, 2, 3, 4, 5, 6, -8, -2, -1, -28});
         int expectedTotal = 21;
         int expectedCount = 6;
         Sum sum = new Sum();
@@ -302,26 +306,44 @@ public class AppTest {
         Option<Method> m = method(AppTest.class, "concat", String.class, String.class, String.class);
         Option<Method> m2 = method(AppTest.class, "concat", Integer.class, String.class, Long.class);
         if (m.isDefined()) {
-            String value = curry(m.get(), this, String.class)._("A")._("B")._("C").apply();
+            String value = curry(m.get(), this, String.class)
+                    ._("A")._("B")._("C")
+                    .apply();
+
             String expected = "ABC";
             Assert.assertEquals(expected, value);
 
-            CurryFunction<String> function = curry(m.get(), this, String.class)._("A")._("B");
-            String value2 = function._("C").apply();
+            CurryFunction<String> function = curry(m.get(), this, String.class)
+                    ._("A")._("B");
+            String value2 = function
+                    ._("C")
+                    .apply();
+
             Assert.assertEquals(expected, value2);
 
-            String value3 = new MyCurryFunction()._("A")._("B")._("C").apply();
+            String value3 = new MyCurryFunction()
+                    ._("A")._("B")._("C")
+                    .apply();
+            
             Assert.assertEquals(expected, value3);
 
-            CurryFunction<String> function2 = new MyCurryFunction()._("A");
-            String value4 = function2._("B")._("C").apply();
+            CurryFunction<String> function2 = new MyCurryFunction()
+                    ._("A");
+            String value4 = function2
+                    ._("B")._("C")
+                    .apply();
+
             Assert.assertEquals(expected, value4);
         } else {
             Assert.fail("Method not defined");
         }
         if (m2.isDefined()) {
-            CurryFunction<String> function = curry(m2.get(), this, String.class)._(new Long(3))._("2");
-            String value5 = function._(1).apply();
+            CurryFunction<String> function = curry(m2.get(), this, String.class)
+                    ._(new Long(3))._("2");
+            String value5 = function
+                    ._(1)
+                    .apply();
+            
             String expected = "123";
             Assert.assertEquals(expected, value5);
         } else {
