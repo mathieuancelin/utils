@@ -13,7 +13,7 @@ public class M {
         return new UnexpectedMatch<T>() {
 
             @Override
-            public <R> ExpectedMatch<T, R> andExcept(Class<R> returnType) {
+            public <R> ExpectedMatch<T, R> andExpect(Class<R> returnType) {
                 return new ExpectedMatchImpl<T, R>(returnType, value);
             }
         };
@@ -31,7 +31,7 @@ public class M {
 
     public static interface UnexpectedMatch<T> {
 
-        <R> ExpectedMatch<T, R> andExcept(Class<R> returnType);
+        <R> ExpectedMatch<T, R> andExpect(Class<R> returnType);
     }
 
     public static interface ExpectedMatch<T, R> {

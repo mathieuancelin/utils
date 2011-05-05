@@ -103,7 +103,7 @@ public class AppTest {
         String value = "foobar";
         Option<String> matched =
             match(value)
-                .andExcept(String.class)
+                .andExpect(String.class)
                     .with(
                         caseEquals("one")
                             .then(new OneFunction()),
@@ -119,7 +119,7 @@ public class AppTest {
         value = "one";
         matched =
             match(value)
-                .andExcept(String.class)
+                .andExpect(String.class)
                     .with(
                         caseEquals("one")
                             .then(new OneFunction()),
@@ -135,7 +135,7 @@ public class AppTest {
         value = "two";
         matched =
             match(value)
-                .andExcept(String.class)
+                .andExpect(String.class)
                     .with(
                         caseEquals("one")
                             .then(new OneFunction()),
@@ -151,7 +151,7 @@ public class AppTest {
         value = "three";
         matched =
             match(value)
-                .andExcept(String.class)
+                .andExpect(String.class)
                     .with(
                         caseEquals("one")
                             .then(new OneFunction()),
@@ -227,18 +227,18 @@ public class AppTest {
         String value = "one";
         String ret = "-1";
         for (String s : with(caseEquals("one"))
-                .and(caseLengthGreater(2))
-                    .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a one";
         }
         for (String s : with(caseEquals("two"))
-                .and(caseLengthGreater(2))
-                    .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a two";
         }
         for (String s : with(caseEquals("three"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "It's a one");
@@ -246,18 +246,18 @@ public class AppTest {
         value = "two";
         ret = "-1";
         for (String s : with(caseEquals("one"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a one";
         }
         for (String s : with(caseEquals("two"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a two";
         }
         for (String s : with(caseEquals("three"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "It's a two");
@@ -265,18 +265,18 @@ public class AppTest {
         value = "three";
         ret = "-1";
         for (String s : with(caseEquals("one"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a one";
         }
         for (String s : with(caseEquals("two"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a two";
         }
         for (String s : with(caseEquals("three"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "It's a three");
@@ -284,18 +284,18 @@ public class AppTest {
         value = "foobar";
         ret = "-1";
         for (String s : with(caseEquals("one"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a one";
         }
         for (String s : with(caseEquals("two"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a two";
         }
         for (String s : with(caseEquals("three"))
-                    .and(caseLengthGreater(2))
-                        .match(value)) {
+                            .and(caseLengthGreater(2))
+                                .match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "-1");
