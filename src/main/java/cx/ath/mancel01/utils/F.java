@@ -1,7 +1,11 @@
 package cx.ath.mancel01.utils;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Utilities for everyday stuff.
@@ -202,6 +206,101 @@ public class F {
         @Override
         public String toString() {
             return "Maybe(" + input + ")";
+        }
+    }
+
+    public static interface CurryFunction<T> {
+
+        T apply();
+
+        <P> CurryFunction<T> _(P arg);
+    }
+
+    public static <T> Option<Method> method(Class<T> type, String name, Class<?>... args) {
+        Method m = null;
+        try {
+            m = type.getDeclaredMethod(name, args);
+            return Option.some(m);
+        } catch (NoSuchMethodException ex) {
+            return Option.none();
+        }
+    }
+
+    public static <T> CurryFunction<T> curry(Option<Method> m, Object on, Class<T> ret) {
+        if (m.isDefined()) {
+            return curry(m.get(), on, ret);
+        } else {
+            throw new IllegalStateException("Method unavailable.");
+        }
+    }
+
+    public static <T> CurryFunction<T> curry(Option<Method> m, Object on, Class<T> ret, Object... with) {
+        if (m.isDefined()) {
+            return curry(m.get(), on, ret, with);
+        } else {
+            throw new IllegalStateException("Method unavailable.");
+        }
+    }
+
+    public static <T> CurryFunction<T> curry(Method m, Object on, Class<T> ret) {
+        return new AutoCurryFunctionImpl<T>(m, on);
+    }
+
+    public static <T> CurryFunction<T> curry(Method m, Object on, Class<T> ret, Object... with) {
+        return new AutoCurryFunctionImpl<T>(m, on, with);
+    }
+
+    public static abstract class AbstractCurryFunction<T> implements CurryFunction<T> {
+
+        protected final List<Object> args = new ArrayList<Object>();
+
+        public void init(Object... initArgs) {
+            if (initArgs != null && initArgs.length > 0) {
+                args.addAll(Arrays.asList(initArgs));
+            }
+        }
+
+        public int getFilledArgsCount() {
+            return args.size();
+        }
+
+        public abstract CurryFunction<T> create(List<Object> args);
+
+        @Override
+        public <P> CurryFunction<T> _(P arg) {
+            List<Object> n1 = new ArrayList<Object>();
+            n1.addAll(args);
+            n1.add(arg);
+            return create(n1);
+        }
+    }
+
+    private static class AutoCurryFunctionImpl<T> extends AbstractCurryFunction<T> {
+
+        private final Method m;
+
+        private final Object on;
+
+        public AutoCurryFunctionImpl(Method m, Object on, Object... initArgs) {
+            this.m = m;
+            this.on = on;
+            init(initArgs);
+        }
+
+        @Override
+        public T apply() {
+            try {
+                m.setAccessible(true);
+                return (T) m.invoke(on, args.toArray(new Object[args.size()]));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                throw new IllegalStateException("Error while running curryfied method", ex);
+            }
+        }
+
+        @Override
+        public CurryFunction<T> create(List<Object> args) {
+            return new AutoCurryFunctionImpl<T>(m, on, args.toArray(new Object[args.size()]));
         }
     }
     

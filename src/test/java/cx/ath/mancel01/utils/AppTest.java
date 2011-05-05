@@ -1,11 +1,14 @@
 package cx.ath.mancel01.utils;
 
+import java.lang.reflect.Method;
 import cx.ath.mancel01.utils.F.Option;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static cx.ath.mancel01.utils.F.*;
 import static cx.ath.mancel01.utils.C.*;
 import static cx.ath.mancel01.utils.M.*;
 
@@ -293,6 +296,48 @@ public class AppTest {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "-1");
+    }
+
+    @Test
+    public void curryTest() {
+        Option<Method> m = method(AppTest.class, "concat", String.class, String.class, String.class);
+        if (m.isDefined()) {
+            String value = curry(m.get(), this, String.class)._("A")._("B")._("C").apply();
+            String expected = "ABC";
+            Assert.assertEquals(expected, value);
+
+            CurryFunction<String> function = curry(m.get(), this, String.class)._("A")._("B");
+            String value2 = function._("C").apply();
+            Assert.assertEquals(expected, value2);
+
+            String value3 = new MyCurryFunction()._("A")._("B")._("C").apply();
+            Assert.assertEquals(expected, value3);
+
+            CurryFunction<String> function2 = new MyCurryFunction()._("A");
+            String value4 = function2._("B")._("C").apply();
+            Assert.assertEquals(expected, value4);
+        } else {
+            Assert.fail("Method not defined");
+        }
+    }
+
+    public class MyCurryFunction extends AbstractCurryFunction<String> {
+
+        @Override
+        public CurryFunction<String> create(List<Object> args) {
+            MyCurryFunction f = new MyCurryFunction();
+            f.init(args.toArray(new Object[args.size()]));
+            return f;
+        }
+
+        @Override
+        public String apply() {
+            return join(args).with("");
+        }
+    }
+
+    public String concat(String s1, String s2, String s3) {
+        return s1.concat(s2).concat(s3);
     }
 
     public class OneFunction implements MatchCaseFunction<String, String> {
