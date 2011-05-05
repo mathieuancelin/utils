@@ -106,7 +106,7 @@ public class C {
             }
         };
     }
-    public static Predicate<String> match(final String regexp) {
+    public static Predicate<String> matchRegex(final String regexp) {
         return new Predicate<String>() {
             @Override
             public boolean apply(String t) {

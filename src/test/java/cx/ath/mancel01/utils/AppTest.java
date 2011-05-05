@@ -96,38 +96,203 @@ public class AppTest {
     public void testPatternMatching() {
         String value = "foobar";
         Option<String> matched =
-            M.match(value).andExcept(String.class).with(
-                caseEquals("one").then(new OneFunction()),
-                caseEquals("two").then(new TwoFunction()),
-                caseEquals("three").then(new ThreeFunction()),
-                otherCases().then(new OtherFunction())
-            );
+            match(value)
+                .andExcept(String.class)
+                    .with(
+                        caseEquals("one")
+                            .then(new OneFunction()),
+                        caseEquals("two")
+                            .then(new TwoFunction()),
+                        caseEquals("three")
+                            .then(new ThreeFunction()),
+                        otherCases()
+                            .then(new OtherFunction())
+                    );
         Assert.assertEquals(matched.get(), "-1");
+        
         value = "one";
-        matched = M.match(value).andExcept(String.class).with(
-            caseEquals("one").then(new OneFunction()),
-            caseEquals("two").then(new TwoFunction()),
-            caseEquals("three").then(new ThreeFunction()),
-            otherCases().then(new OtherFunction())
-        );
+        matched =
+            match(value)
+                .andExcept(String.class)
+                    .with(
+                        caseEquals("one")
+                            .then(new OneFunction()),
+                        caseEquals("two")
+                            .then(new TwoFunction()),
+                        caseEquals("three")
+                            .then(new ThreeFunction()),
+                        otherCases()
+                            .then(new OtherFunction())
+                    );
         Assert.assertEquals(matched.get(), "It's a one");
+        
         value = "two";
-        matched = M.match(value).andExcept(String.class).with(
-            caseEquals("one").then(new OneFunction()),
-            caseEquals("two").then(new TwoFunction()),
-            caseEquals("three").then(new ThreeFunction()),
-            otherCases().then(new OtherFunction())
-        );
+        matched =
+            match(value)
+                .andExcept(String.class)
+                    .with(
+                        caseEquals("one")
+                            .then(new OneFunction()),
+                        caseEquals("two")
+                            .then(new TwoFunction()),
+                        caseEquals("three")
+                            .then(new ThreeFunction()),
+                        otherCases()
+                            .then(new OtherFunction())
+                    );
         Assert.assertEquals(matched.get(), "It's a two");
+        
         value = "three";
-        matched = M.match(value).andExcept(String.class).with(
-            caseEquals("one").then(new OneFunction()),
-            caseEquals("two").then(new TwoFunction()),
-            caseEquals("three").then(new ThreeFunction()),
-            otherCases().then(new OtherFunction())
-        );
+        matched =
+            match(value)
+                .andExcept(String.class)
+                    .with(
+                        caseEquals("one")
+                            .then(new OneFunction()),
+                        caseEquals("two")
+                            .then(new TwoFunction()),
+                        caseEquals("three")
+                            .then(new ThreeFunction()),
+                        otherCases()
+                            .then(new OtherFunction())
+                    );
         Assert.assertEquals(matched.get(), "It's a three");
 
+        
+    }
+
+    @Test
+    public void testPatternMatching2() {
+        String value = "one";
+        String ret = "-1";
+        for (String s : caseEquals("one").match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : caseEquals("two").match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : caseEquals("three").match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "It's a one");
+
+        value = "two";
+        ret = "-1";
+        for (String s : caseEquals("one").match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : caseEquals("two").match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : caseEquals("three").match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "It's a two");
+
+        value = "three";
+        ret = "-1";
+        for (String s : caseEquals("one").match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : caseEquals("two").match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : caseEquals("three").match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "It's a three");
+
+        value = "foobar";
+        ret = "-1";
+        for (String s : caseEquals("one").match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : caseEquals("two").match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : caseEquals("three").match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "-1");
+    }
+
+    @Test
+    public void testPatternMatching3() {
+        String value = "one";
+        String ret = "-1";
+        for (String s : with(caseEquals("one"))
+                .and(caseLengthGreater(2))
+                    .match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : with(caseEquals("two"))
+                .and(caseLengthGreater(2))
+                    .match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : with(caseEquals("three"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "It's a one");
+
+        value = "two";
+        ret = "-1";
+        for (String s : with(caseEquals("one"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : with(caseEquals("two"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : with(caseEquals("three"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "It's a two");
+
+        value = "three";
+        ret = "-1";
+        for (String s : with(caseEquals("one"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : with(caseEquals("two"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : with(caseEquals("three"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "It's a three");
+
+        value = "foobar";
+        ret = "-1";
+        for (String s : with(caseEquals("one"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a one";
+        }
+        for (String s : with(caseEquals("two"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a two";
+        }
+        for (String s : with(caseEquals("three"))
+                    .and(caseLengthGreater(2))
+                        .match(value)) {
+            ret = "It's a three";
+        }
+        Assert.assertEquals(ret, "-1");
     }
 
     public class OneFunction implements MatchCaseFunction<String, String> {

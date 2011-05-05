@@ -39,11 +39,28 @@ public class M {
         Option<R> with(ExecutableMatcher<T, R>... matchers);
     }
 
+    public static <T, R> Matcher<T, R> with(Matcher<T, R> matcher) {
+        return matcher;
+    }
+
     public static abstract class Matcher<T, R> {
 
         MatchCaseFunction<T, R> function;
 
-        public abstract boolean match(T o);
+        public abstract Option<R> match(T o);
+
+        public <NR> Matcher<T, NR> and(final Matcher<R, NR> next) {
+            final Matcher<T, R> first = this;
+            return new Matcher<T, NR>() {
+                @Override
+                public Option<NR> match(T o) {
+                    for (R r : first.match(o)) {
+                        return next.match(r);
+                    }
+                    return Option.none();
+                }
+            };
+        }
 
         public ExecutableMatcher<T, R> then(MatchCaseFunction<T, R> function) {
             this.function = function;
@@ -61,7 +78,8 @@ public class M {
 
         @Override
         public Option<R> execute(T value) {
-            if (matcher.match(value)) {
+            Option<R> matched = matcher.match(value);
+            if (matched.isDefined()) {
                 return matcher.function.apply(value);
             } else {
                 return Option.none();
@@ -91,15 +109,15 @@ public class M {
         }
     }
 
-    public static <K> Matcher<Object, K> caseClassOf(final Class<K> clazz) {
-        return new Matcher<Object, K>() {
+    public static <K> Matcher<Object, Object> caseClassOf(final Class<K> clazz) {
+        return new Matcher<Object, Object>() {
 
             @Override
-            public boolean match(Object o) {
+            public Option<Object> match(Object o) {
                 if (clazz.isInstance(o)) {
-                    return true;
+                    return Option.some(o);
                 }
-                return false;
+                return Option.none();
             }
         };
     }
@@ -108,8 +126,76 @@ public class M {
         return new Matcher<String, String>() {
 
             @Override
-            public boolean match(String o) {
-                return o.startsWith(prefix);
+            public Option<String> match(String o) {
+                if (o.startsWith(prefix)) {
+                    return Option.some(o);
+                }
+                return Option.none();
+            }
+        };
+    }
+
+    public static Matcher<String, String> caseLengthGreater(final int than) {
+        return new Matcher<String, String>() {
+
+            @Override
+            public Option<String> match(String o) {
+                if (o.length() > than) {
+                    return Option.some(o);
+                }
+                return Option.none();
+            }
+        };
+    }
+
+    public static Matcher<String, String> caseLengthGreaterEq(final int than) {
+        return new Matcher<String, String>() {
+
+            @Override
+            public Option<String> match(String o) {
+                if (o.length() >= than) {
+                    return Option.some(o);
+                }
+                return Option.none();
+            }
+        };
+    }
+
+    public static Matcher<String, String> caseLengthLesser(final int than) {
+        return new Matcher<String, String>() {
+
+            @Override
+            public Option<String> match(String o) {
+                if (o.length() < than) {
+                    return Option.some(o);
+                }
+                return Option.none();
+            }
+        };
+    }
+
+    public static Matcher<String, String> caseLengthLesserEq(final int than) {
+        return new Matcher<String, String>() {
+
+            @Override
+            public Option<String> match(String o) {
+                if (o.length() <= than) {
+                    return Option.some(o);
+                }
+                return Option.none();
+            }
+        };
+    }
+
+    public static Matcher<String, String> caseLengthEquals(final int with) {
+        return new Matcher<String, String>() {
+
+            @Override
+            public Option<String> match(String o) {
+                if (o.length() == with) {
+                    return Option.some(o);
+                }
+                return Option.none();
             }
         };
     }
@@ -118,8 +204,11 @@ public class M {
         return new Matcher<String, String>() {
 
             @Override
-            public boolean match(String o) {
-                return o.matches(pattern);
+            public Option<String> match(String o) {
+                if (o.matches(pattern)) {
+                    return Option.some(o);
+                }
+                return Option.none();
             }
         };
     }
@@ -128,8 +217,11 @@ public class M {
         return new Matcher<X, X>() {
 
             @Override
-            public boolean match(X o) {
-                return o.equals(other);
+            public Option<X> match(X o) {
+                if (o.equals(other)) {
+                    return Option.some(o);
+                }
+                return Option.none();
             }
         };
     }
@@ -138,8 +230,11 @@ public class M {
         return new Matcher<String, String>() {
 
             @Override
-            public boolean match(String o) {
-                return o.contains(contain);
+            public Option<String> match(String o) {
+                if (o.contains(contain)) {
+                    return Option.some(o);
+                }
+                return Option.none();
             }
         };
     }
@@ -148,8 +243,8 @@ public class M {
         return new Matcher<String, String>() {
 
             @Override
-            public boolean match(String o) {
-                return true;
+            public Option<String> match(String o) {
+                return Option.some(o);
             }
         };
     }
