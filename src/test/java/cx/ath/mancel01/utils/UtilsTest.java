@@ -11,8 +11,7 @@ import static cx.ath.mancel01.utils.F.*;
 import static cx.ath.mancel01.utils.C.*;
 import static cx.ath.mancel01.utils.M.*;
 
-
-public class AppTest {
+public class UtilsTest {
 
     @Test
     public void testCollections() {
@@ -303,9 +302,9 @@ public class AppTest {
 
     @Test
     public void curryTest() {
-        Option<Method> m = method(AppTest.class, "concat",
+        Option<Method> m = method(UtilsTest.class, "concat",
                     String.class, String.class, String.class);
-        Option<Method> m2 = method(AppTest.class, "concat",
+        Option<Method> m2 = method(UtilsTest.class, "concat",
                     Integer.class, String.class, Long.class);
         if (m.isDefined()) {
             String value = curry(m, this, String.class)
