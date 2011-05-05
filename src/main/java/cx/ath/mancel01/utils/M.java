@@ -109,13 +109,13 @@ public class M {
         }
     }
 
-    public static <K> Matcher<Object, Object> caseClassOf(final Class<K> clazz) {
-        return new Matcher<Object, Object>() {
+    public static <K> Matcher<Object, K> caseClassOf(final Class<K> clazz) {
+        return new Matcher<Object, K>() {
 
             @Override
-            public Option<Object> match(Object o) {
+            public Option<K> match(Object o) {
                 if (clazz.isInstance(o)) {
-                    return Option.some(o);
+                    return Option.some(clazz.cast(o));
                 }
                 return Option.none();
             }
