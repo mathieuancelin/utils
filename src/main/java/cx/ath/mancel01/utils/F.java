@@ -1,7 +1,9 @@
 package cx.ath.mancel01.utils;
 
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -9,8 +11,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Utilities for everyday stuff.
@@ -335,6 +335,48 @@ public class F {
         @Override
         public CurryFunction<T> create(List<Object> args) {
             return new AutoCurryFunctionImpl<T>(m, on, args.toArray(new Object[args.size()]));
+        }
+    }
+
+    public static <T, I> T target(I t, Class<T> contract) {
+        if (!contract.isInterface()) {
+            throw new IllegalStateException("Only works with interfaces");
+        }
+        return (T) Proxy.newProxyInstance(F.class.getClassLoader(),
+                new Class[] {contract}, new CurryHandler(t, contract));
+    }
+    
+    public static <T, R> CurryFunction<R> curry(T o, Class<R> expect) {
+        if (CurryHandler.current.get() != null) {
+            CurryHandler handler = CurryHandler.current.get();
+            CurryHandler.current.remove();
+            return new AutoCurryFunctionImpl<R>(handler.m, handler.o);
+        } else {
+            throw new IllegalStateException("You can't curry this object");
+        }
+    }
+
+    private static class CurryHandler implements InvocationHandler {
+
+        public static ThreadLocal<CurryHandler> current = new ThreadLocal<CurryHandler>();
+        final Object o;
+        final Class clazz;
+        Method m;
+
+        public CurryHandler(Object o, Class clazz) {
+            this.o = o;
+            this.clazz = clazz;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            current.set(this);
+            try {
+                this.m = method;
+                return null;
+            } finally {
+                //current.remove();
+            }
         }
     }
 

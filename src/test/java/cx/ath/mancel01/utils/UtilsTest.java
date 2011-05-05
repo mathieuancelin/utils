@@ -11,7 +11,7 @@ import static cx.ath.mancel01.utils.F.*;
 import static cx.ath.mancel01.utils.C.*;
 import static cx.ath.mancel01.utils.M.*;
 
-public class UtilsTest {
+public class UtilsTest implements Utils {
 
     @Test
     public void testCollections() {
@@ -370,6 +370,49 @@ public class UtilsTest {
         }
     }
 
+    private String n = null;
+
+    @Test
+    public void curryTest2() {
+        Utils u = target(this, Utils.class);
+
+        String value = curry(u.concat(n, n, n), String.class)
+                ._("A")._("B")._("C")
+                .apply();
+
+        String expected = "ABC";
+        Assert.assertEquals(expected, value);
+
+        CurryFunction<String> function =
+            curry(u.concat(n, n, n), String.class)
+                ._("A")._("B");
+        String value2 =
+            function
+                ._("C")
+                .apply();
+        String value22 =
+            function
+                ._("D")
+                .apply();
+        String value222 =
+            function
+                ._("E")
+                .apply();
+
+        Assert.assertEquals(expected, value2);
+        Assert.assertEquals("ABD", value22);
+        Assert.assertEquals("ABE", value222);
+
+        function =
+            curry(u.concat(0, n, 0L), String.class)
+                ._(new Long(3))._("2");
+        String value5 =
+            function._(1).apply();
+
+        expected = "123";
+        Assert.assertEquals(expected, value5);
+    }
+
     public class MyCurryFunction extends AbstractCurryFunction<String> {
 
         @Override
@@ -385,10 +428,12 @@ public class UtilsTest {
         }
     }
 
+    @Override
     public String concat(String s1, String s2, String s3) {
         return s1.concat(s2).concat(s3);
     }
 
+    @Override
     public String concat(Integer s1, String s2, Long s3) {
         return ("" + s1).concat(s2).concat("" + s3);
     }
