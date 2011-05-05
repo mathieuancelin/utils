@@ -22,11 +22,12 @@ public class UtilsTest {
         Collection<String> result = 
             forEach(values)
                 .apply(new Transformation<String, String>() {
-            @Override
-            public String apply(String t) {
-                return t.toUpperCase();
-            }
-        }).get();
+                        @Override
+                        public String apply(String t) {
+                            return t.toUpperCase();
+                        }
+                    }
+                ).get();
         Assert.assertEquals(expected, result);
     }
 
