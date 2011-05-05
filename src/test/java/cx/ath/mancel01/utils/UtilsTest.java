@@ -10,6 +10,7 @@ import org.junit.Test;
 import static cx.ath.mancel01.utils.F.*;
 import static cx.ath.mancel01.utils.C.*;
 import static cx.ath.mancel01.utils.M.*;
+import static cx.ath.mancel01.utils.Y.*;
 
 public class UtilsTest implements Utils {
 
@@ -310,7 +311,7 @@ public class UtilsTest implements Utils {
         if (m.isDefined()) {
             String value = curry(m, this, String.class)
                     ._("A")._("B")._("C")
-                    .apply();
+                    .get();
 
             String expected = "ABC";
             Assert.assertEquals(expected, value);
@@ -321,15 +322,15 @@ public class UtilsTest implements Utils {
             String value2 =
                 function
                     ._("C")
-                    .apply();
+                    .get();
             String value22 =
                 function
                     ._("D")
-                    .apply();
+                    .get();
             String value222 =
                 function
                     ._("E")
-                    .apply();
+                    .get();
 
             Assert.assertEquals(expected, value2);
             Assert.assertEquals("ABD", value22);
@@ -338,7 +339,7 @@ public class UtilsTest implements Utils {
             String value3 =
                 new MyCurryFunction()
                     ._("A")._("B")._("C")
-                    .apply();
+                    .get();
             
             Assert.assertEquals(expected, value3);
 
@@ -348,7 +349,7 @@ public class UtilsTest implements Utils {
             String value4 =
                 function2
                     ._("B")._("C")
-                    .apply();
+                    .get();
 
             Assert.assertEquals(expected, value4);
         } else {
@@ -361,7 +362,7 @@ public class UtilsTest implements Utils {
             String value5 =
                 function
                     ._(1)
-                    .apply();
+                    .get();
             
             String expected = "123";
             Assert.assertEquals(expected, value5);
@@ -378,7 +379,7 @@ public class UtilsTest implements Utils {
 
         String value = curry(u.concat(n, n, n))
                 ._("A")._("B")._("C")
-                .apply();
+                .get();
 
         String expected = "ABC";
         Assert.assertEquals(expected, value);
@@ -389,15 +390,15 @@ public class UtilsTest implements Utils {
         String value2 =
             function
                 ._("C")
-                .apply();
+                .get();
         String value22 =
             function
                 ._("D")
-                .apply();
+                .get();
         String value222 =
             function
                 ._("E")
-                .apply();
+                .get();
 
         Assert.assertEquals(expected, value2);
         Assert.assertEquals("ABD", value22);
@@ -407,7 +408,7 @@ public class UtilsTest implements Utils {
             curry(u.concat(0, n, 0L))
                 ._(new Long(3))._("2");
         String value5 =
-            function._(1).apply();
+            function._(1).get();
 
         expected = "123";
         Assert.assertEquals(expected, value5);
@@ -423,7 +424,7 @@ public class UtilsTest implements Utils {
         }
 
         @Override
-        public String apply() {
+        public String get() {
             return join(args).with("");
         }
     }
