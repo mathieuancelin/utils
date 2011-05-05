@@ -303,8 +303,10 @@ public class AppTest {
 
     @Test
     public void curryTest() {
-        Option<Method> m = method(AppTest.class, "concat", String.class, String.class, String.class);
-        Option<Method> m2 = method(AppTest.class, "concat", Integer.class, String.class, Long.class);
+        Option<Method> m = method(AppTest.class, "concat",
+                    String.class, String.class, String.class);
+        Option<Method> m2 = method(AppTest.class, "concat",
+                    Integer.class, String.class, Long.class);
         if (m.isDefined()) {
             String value = curry(m.get(), this, String.class)
                     ._("A")._("B")._("C")
@@ -318,8 +320,16 @@ public class AppTest {
             String value2 = function
                     ._("C")
                     .apply();
+            String value22 = function
+                    ._("D")
+                    .apply();
+            String value222 = function
+                    ._("E")
+                    .apply();
 
             Assert.assertEquals(expected, value2);
+            Assert.assertEquals("ABD", value22);
+            Assert.assertEquals("ABE", value222);
 
             String value3 = new MyCurryFunction()
                     ._("A")._("B")._("C")
