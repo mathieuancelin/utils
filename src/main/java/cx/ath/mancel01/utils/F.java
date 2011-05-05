@@ -345,12 +345,12 @@ public class F {
         return (T) Proxy.newProxyInstance(F.class.getClassLoader(),
                 new Class[] {contract}, new CurryHandler(t, contract));
     }
-    
-    public static <T, R> CurryFunction<R> curry(T o, Class<R> expect) {
+
+    public static <T, R> CurryFunction<T> curry(T o) {
         if (CurryHandler.current.get() != null) {
             CurryHandler handler = CurryHandler.current.get();
             CurryHandler.current.remove();
-            return new AutoCurryFunctionImpl<R>(handler.m, handler.o);
+            return new AutoCurryFunctionImpl<T>(handler.m, handler.o);
         } else {
             throw new IllegalStateException("You can't curry this object");
         }

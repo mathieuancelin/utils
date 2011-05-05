@@ -376,7 +376,7 @@ public class UtilsTest implements Utils {
     public void curryTest2() {
         Utils u = target(this, Utils.class);
 
-        String value = curry(u.concat(n, n, n), String.class)
+        String value = curry(u.concat(n, n, n))
                 ._("A")._("B")._("C")
                 .apply();
 
@@ -384,7 +384,7 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(expected, value);
 
         CurryFunction<String> function =
-            curry(u.concat(n, n, n), String.class)
+            curry(u.concat(n, n, n))
                 ._("A")._("B");
         String value2 =
             function
@@ -404,7 +404,7 @@ public class UtilsTest implements Utils {
         Assert.assertEquals("ABE", value222);
 
         function =
-            curry(u.concat(0, n, 0L), String.class)
+            curry(u.concat(0, n, 0L))
                 ._(new Long(3))._("2");
         String value5 =
             function._(1).apply();
