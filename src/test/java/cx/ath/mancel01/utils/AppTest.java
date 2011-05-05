@@ -1,7 +1,6 @@
 package cx.ath.mancel01.utils;
 
 import java.lang.reflect.Method;
-import cx.ath.mancel01.utils.F.Option;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -301,6 +300,7 @@ public class AppTest {
     @Test
     public void curryTest() {
         Option<Method> m = method(AppTest.class, "concat", String.class, String.class, String.class);
+        Option<Method> m2 = method(AppTest.class, "concat", Integer.class, String.class, String.class);
         if (m.isDefined()) {
             String value = curry(m.get(), this, String.class)._("A")._("B")._("C").apply();
             String expected = "ABC";
@@ -316,6 +316,14 @@ public class AppTest {
             CurryFunction<String> function2 = new MyCurryFunction()._("A");
             String value4 = function2._("B")._("C").apply();
             Assert.assertEquals(expected, value4);
+        } else {
+            Assert.fail("Method not defined");
+        }
+        if (m2.isDefined()) {
+            CurryFunction<String> function = curry(m2.get(), this, String.class)._("2")._("3");
+            String value5 = function._(1).apply();
+            String expected = "123";
+            Assert.assertEquals(expected, value5);
         } else {
             Assert.fail("Method not defined");
         }
@@ -338,6 +346,10 @@ public class AppTest {
 
     public String concat(String s1, String s2, String s3) {
         return s1.concat(s2).concat(s3);
+    }
+
+    public String concat(Integer s1, String s2, String s3) {
+        return ("" + s1).concat(s2).concat(s3);
     }
 
     public class OneFunction implements MatchCaseFunction<String, String> {

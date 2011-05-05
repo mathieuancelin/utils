@@ -1,11 +1,16 @@
 package cx.ath.mancel01.utils;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utilities for everyday stuff.
@@ -66,14 +71,14 @@ public class F {
             return value;
         }
     }
-    
+
     public static class Some<T> extends Option<T> {
 
         final T value;
 
         public Some(T value) {
             if (value == null) {
-               throw new IllegalStateException("Null value");
+                throw new IllegalStateException("Null value");
             }
             this.value = value;
         }
@@ -278,7 +283,6 @@ public class F {
     private static class AutoCurryFunctionImpl<T> extends AbstractCurryFunction<T> {
 
         private final Method m;
-
         private final Object on;
 
         public AutoCurryFunctionImpl(Method m, Object on, Object... initArgs) {
@@ -292,8 +296,38 @@ public class F {
             try {
                 m.setAccessible(true);
                 return (T) m.invoke(on, args.toArray(new Object[args.size()]));
+            } catch (IllegalAccessException ex) {
+                throw new IllegalStateException("Error while running curryfied method", ex);
+            } catch (IllegalArgumentException ex) {
+                return tryArgsRemapping();
+            } catch (InvocationTargetException ex) {
+                throw new IllegalStateException("Error while running curryfied method", ex);
+            }
+        }
+
+        private T tryArgsRemapping() {
+            Map<Class<?>, List<Object>> foundArgs = new HashMap<Class<?>, List<Object>>();
+            for (Object arg : args) {
+                if (!foundArgs.containsKey(arg.getClass())) {
+                    foundArgs.put(arg.getClass(), new ArrayList<Object>());
+                }
+                foundArgs.get(arg.getClass()).add(arg);
+            }
+            Object[] finalArgs = new Object[args.size()];
+            int i = 0;
+            for (Class<?> expectedType : m.getParameterTypes()) {
+                List<Object> found = foundArgs.get(expectedType);
+                if (found == null) {
+                    throw new IllegalStateException("Invalid arguments passed to CurryFunction, expected : " + expectedType);
+                }
+                finalArgs[i] = found.get(0);
+                foundArgs.get(expectedType).remove(0);
+                i++;
+            }
+            try {
+                m.setAccessible(true);
+                return (T) m.invoke(on, finalArgs);
             } catch (Exception ex) {
-                ex.printStackTrace();
                 throw new IllegalStateException("Error while running curryfied method", ex);
             }
         }
@@ -303,7 +337,7 @@ public class F {
             return new AutoCurryFunctionImpl<T>(m, on, args.toArray(new Object[args.size()]));
         }
     }
-    
+
     public static <A, B> Tuple<A, B> tuple(A a, B b) {
         return new Tuple(a, b);
     }
@@ -314,5 +348,5 @@ public class F {
 
     public static <A> Maybe<A> maybe(A a) {
         return new Maybe(a);
-    }  
+    }
 }
