@@ -414,6 +414,47 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(expected, value5);
     }
 
+    @Test
+    public void curryTest3() {
+        UtilsTest u = target(this);
+
+        String value = curry(u.concat(n, n, n))
+                ._("A")._("B")._("C")
+                .get();
+
+        String expected = "ABC";
+        Assert.assertEquals(expected, value);
+
+        CurryFunction<String> function =
+            curry(u.concat(n, n, n))
+                ._("A")._("B");
+        String value2 =
+            function
+                ._("C")
+                .get();
+        String value22 =
+            function
+                ._("D")
+                .get();
+        String value222 =
+            function
+                ._("E")
+                .get();
+
+        Assert.assertEquals(expected, value2);
+        Assert.assertEquals("ABD", value22);
+        Assert.assertEquals("ABE", value222);
+
+        function =
+            curry(u.concat(0, n, 0L))
+                ._(new Long(3))._("2");
+        String value5 =
+            function._(1).get();
+
+        expected = "123";
+        Assert.assertEquals(expected, value5);
+    }
+
     public class MyCurryFunction extends AbstractCurryFunction<String> {
 
         @Override
