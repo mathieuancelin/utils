@@ -10,6 +10,13 @@ import java.util.Collection;
  */
 public class C {
 
+    /**
+     * Return an object capable of applying a function for each item in the collection.
+     *
+     * @param <T>
+     * @param collection the processed collection
+     * @return an Each Object
+     */
     public static <T> Each<T> forEach(Collection<T> collection) {
         return new EachImpl<T>(collection);
     }

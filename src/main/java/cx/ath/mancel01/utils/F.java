@@ -1,16 +1,7 @@
 package cx.ath.mancel01.utils;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Utilities for everyday stuff.
@@ -125,7 +116,7 @@ public class F {
 
         public <A> Option<A> typed(Class<A> type) {
             if (isTyped(type)) {
-                return F.some(type.cast(value));
+                return Option.some(type.cast(value));
             } else {
                 return (Option<A>) F.none;
             }
@@ -143,11 +134,11 @@ public class F {
         }
 
         public static <A, B> Either<A, B> _1(A value) {
-            return new Either(some(value), none);
+            return new Either(Option.some(value), none);
         }
 
         public static <A, B> Either<A, B> _2(B value) {
-            return new Either(none, some(value));
+            return new Either(none, Option.some(value));
         }
 
         @Override
@@ -216,13 +207,5 @@ public class F {
 
     public static <A, B> Tuple<A, B> tuple(A a, B b) {
         return new Tuple(a, b);
-    }
-
-    public static <A> Some<A> some(A a) {
-        return new Some(a);
-    }
-
-    public static <A> Maybe<A> maybe(A a) {
-        return new Maybe(a);
     }
 }
