@@ -52,6 +52,20 @@ public class Y {
         }
     }
 
+    /**
+     * Creates a mock usable with method curry(T o) to target a specific
+     * method to curry with :
+     * <code>
+     *      Person p = target(new Person());
+     *      curry(p.fill(n, n, n, n))._("John")._("Doe")._("Boston")._("USA").get();
+     * </code>
+     * 
+     * @param <T>
+     * @param <I>
+     * @param t
+     * @param contracts
+     * @return
+     */
     public static <T, I> T target(I t, Class<T>... contracts) {
         if (contracts == null || contracts.length == 0) {
             try {
