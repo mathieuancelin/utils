@@ -443,7 +443,7 @@ public class UtilsTest implements Utils {
 
         @Override
         public Option<String> apply(String value) {
-            return F.some("It's a one");
+            return Option.some("It's a one");
         }
     }
 
@@ -451,7 +451,7 @@ public class UtilsTest implements Utils {
 
         @Override
         public Option<String> apply(String value) {
-            return F.some("It's a two");
+            return Option.some("It's a two");
         }
     }
 
@@ -459,7 +459,7 @@ public class UtilsTest implements Utils {
 
         @Override
         public Option<String> apply(String value) {
-            return F.some("It's a three");
+            return Option.some("It's a three");
         }
     }
 
@@ -467,7 +467,7 @@ public class UtilsTest implements Utils {
 
         @Override
         public Option<String> apply(String value) {
-            return F.some("-1");
+            return Option.some("-1");
         }
     }
 
