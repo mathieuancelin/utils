@@ -18,6 +18,10 @@ public class F {
 
         public abstract boolean isDefined();
 
+        public abstract boolean isEmpty();
+
+        public abstract Option<T> orElse(T value);
+
         public abstract T get();
 
         public abstract T getOrElse(T value);
@@ -61,6 +65,16 @@ public class F {
         public T getOrElse(T value) {
             return value;
         }
+
+        @Override
+        public boolean isEmpty() {
+            return true;
+        }
+
+        @Override
+        public Option<T> orElse(T value) {
+            return Option.some(value);
+        }
     }
 
     public static class Some<T> extends Option<T> {
@@ -68,9 +82,6 @@ public class F {
         final T value;
 
         public Some(T value) {
-            if (value == null) {
-                throw new IllegalStateException("Null value");
-            }
             this.value = value;
         }
 
@@ -91,12 +102,22 @@ public class F {
 
         @Override
         public String toString() {
-            return "Some(" + value + ")";
+            return "Some ( " + value + " )";
         }
 
         @Override
         public T getOrElse(T value) {
             return this.value;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return false;
+        }
+
+        @Override
+        public Option<T> orElse(T value) {
+            return this;
         }
     }
 
@@ -125,25 +146,37 @@ public class F {
 
     public static class Either<A, B> {
 
-        final public Option<A> _1;
-        final public Option<B> _2;
+        final public Option<A> left;
+        final public Option<B> right;
 
-        private Either(Option<A> _1, Option<B> _2) {
-            this._1 = _1;
-            this._2 = _2;
+        private Either(Option<A> left, Option<B> right) {
+            this.left = left;
+            this.right = right;
         }
 
-        public static <A, B> Either<A, B> _1(A value) {
+        public static <A, B> Either<A, B> left(A value) {
             return new Either(Option.some(value), none);
         }
 
-        public static <A, B> Either<A, B> _2(B value) {
+        public static <A, B> Either<A, B> right(B value) {
             return new Either(none, Option.some(value));
+        }
+
+        public boolean isLeft() {
+            return left.isDefined();
+        }
+
+        public boolean isRight() {
+            return right.isDefined();
+        }
+
+        public Either<B, A> swap() {
+            return new Either<B, A>(right,left);
         }
 
         @Override
         public String toString() {
-            return "E2(_1: " + _1 + ", _2: " + _2 + ")";
+            return "Either ( left: " + left + ", right: " + right + " )";
         }
     }
 
@@ -157,12 +190,22 @@ public class F {
             this._2 = _2;
         }
 
+        public Tuple<B, A> swap() {
+            return new Tuple<B, A>(_2, _1);
+        }
+
         @Override
         public String toString() {
-            return "T2(_1: " + _1 + ", _2: " + _2 + ")";
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + " )";
         }
     }
 
+    /**
+     * A not so good version of some. Mostly used to wrap
+     * return of library methods.
+     *
+     * @param <T>
+     */
     public static class Maybe<T> extends Option<T> {
 
         private final T input;
@@ -201,11 +244,29 @@ public class F {
 
         @Override
         public String toString() {
-            return "Maybe(" + input + ")";
+            return "Maybe ( " + input + " )";
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return !isDefined();
+        }
+
+        @Override
+        public Option<T> orElse(T value) {
+            if (isDefined()) {
+                return this;
+            } else {
+                return Option.some(value);
+            }
         }
     }
 
     public static <A, B> Tuple<A, B> tuple(A a, B b) {
         return new Tuple(a, b);
+    }
+
+    public static <A> Maybe<A> maybe(A a) {
+        return new Maybe(a);
     }
 }

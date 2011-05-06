@@ -14,7 +14,7 @@ public class M {
 
             @Override
             public <R> ExpectedMatch<T, R> andExpect(Class<R> returnType) {
-                return new ExpectedMatchImpl<T, R>(returnType, value);
+                return new ExpectedMatchImpl<T, R>(value);
             }
         };
     }
@@ -89,11 +89,9 @@ public class M {
 
     private static class ExpectedMatchImpl<T, R> implements ExpectedMatch<T, R> {
 
-        private final Class<R> returnType;
         private final T value;
 
-        public ExpectedMatchImpl(Class<R> returnType, T value) {
-            this.returnType = returnType;
+        public ExpectedMatchImpl(T value) {
             this.value = value;
         }
 
