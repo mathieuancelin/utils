@@ -34,47 +34,75 @@ import javax.tools.ToolProvider;
  */
 public class Y {
 
+    public static <T, R> CurryFunction<T> curry(T o) {
+        if (CurryHandler.current.get() != null) {
+            CurryHandler handler = CurryHandler.current.get();
+            CurryHandler.current.remove();
+            return new AutoCurryFunctionImpl<T>(handler.m, handler.o);
+        } else {
+            throw new IllegalStateException("You can't curry this object");
+        }
+    }
+
+    public static <T> CurryFunction<T> curryM(Option<CurryMethod<T>> m, Object... with) {
+        if (m.isDefined()) {
+            return new AutoCurryFunctionImpl<T>(m.get().m, m.get().on, with);
+        } else {
+            throw new IllegalStateException("Method unavailable.");
+        }
+    }
+
+    public static <T, I> T target(I t, Class<T>... contracts) {
+        if (contracts == null || contracts.length == 0) {
+            try {
+                Class<?> clazz = getProxyClass(t.getClass());
+                if (clazz == null) {
+                    throw new IllegalStateException("Error while creating proxy for " + t);
+                }
+                Object o = clazz.newInstance();
+                InvocationHandler h = new CurryHandler(t, new Class[] {t.getClass()});
+                ((Y.CustomProxy) o).setFrom(t.getClass());
+                ((Y.CustomProxy) o).setHandler(h);
+                return (T) o;
+            } catch (Exception ex) {
+                throw new IllegalStateException("Error while creating proxy for " + t, ex);
+            }
+        }
+        return (T) Proxy.newProxyInstance(F.class.getClassLoader(),
+                contracts, new CurryHandler(t, contracts));
+    }
+
+    public static <T> Option<CurryMethod<T>> method(Object on, Class<T> ret, String methodName, Class<?>... args) {
+        Method m = null;
+        try {
+            m = on.getClass().getDeclaredMethod(methodName, args);
+            return Option.some(new CurryMethod<T>(m, on, ret, args));
+        } catch (NoSuchMethodException ex) {
+            return Option.none();
+        }
+    }
+
+    public static class CurryMethod<T> {
+        final Method m;
+        final Object on;
+        final Class<T> ret;
+        final Object[] args;
+
+        public CurryMethod(Method m, Object on, Class<T> ret, Object[] args) {
+            this.m = m;
+            this.on = on;
+            this.ret = ret;
+            this.args = args;
+        }
+    }
+
     public static interface CurryFunction<T> {
 
         T get();
 
         <P> CurryFunction<T> _(P arg);
     }
-
-    public static <T> Option<Method> method(Class<T> type, String name, Class<?>... args) {
-        Method m = null;
-        try {
-            m = type.getDeclaredMethod(name, args);
-            return Option.some(m);
-        } catch (NoSuchMethodException ex) {
-            return Option.none();
-        }
-    }
-
-    public static <T> CurryFunction<T> curry(Option<Method> m, Object on, Class<T> ret) {
-        if (m.isDefined()) {
-            return curry(m.get(), on, ret);
-        } else {
-            throw new IllegalStateException("Method unavailable.");
-        }
-    }
-
-    public static <T> CurryFunction<T> curry(Option<Method> m, Object on, Class<T> ret, Object... with) {
-        if (m.isDefined()) {
-            return curry(m.get(), on, ret, with);
-        } else {
-            throw new IllegalStateException("Method unavailable.");
-        }
-    }
-
-    public static <T> CurryFunction<T> curry(Method m, Object on, Class<T> ret) {
-        return new AutoCurryFunctionImpl<T>(m, on);
-    }
-
-    public static <T> CurryFunction<T> curry(Method m, Object on, Class<T> ret, Object... with) {
-        return new AutoCurryFunctionImpl<T>(m, on, with);
-    }
-
+    
     public static abstract class AbstractCurryFunction<T> implements CurryFunction<T> {
 
         protected final List<Object> args = new ArrayList<Object>();
@@ -155,36 +183,6 @@ public class Y {
         @Override
         public CurryFunction<T> create(List<Object> args) {
             return new AutoCurryFunctionImpl<T>(m, on, args.toArray(new Object[args.size()]));
-        }
-    }
-
-    public static <T, I> T target(I t, Class<T>... contracts) {
-        if (contracts == null || contracts.length == 0) {
-            try {
-                Class<?> clazz = getProxyClass(t.getClass());
-                if (clazz == null) {
-                    throw new IllegalStateException("Error while creating proxy for " + t);
-                }
-                Object o = clazz.newInstance();
-                InvocationHandler h = new CurryHandler(t, new Class[] {t.getClass()});
-                ((Y.CustomProxy) o).setFrom(t.getClass());
-                ((Y.CustomProxy) o).setHandler(h);
-                return (T) o;
-            } catch (Exception ex) {
-                throw new IllegalStateException("Error while creating proxy for " + t, ex);
-            }
-        }
-        return (T) Proxy.newProxyInstance(F.class.getClassLoader(),
-                contracts, new CurryHandler(t, contracts));
-    }
-
-    public static <T, R> CurryFunction<T> curry(T o) {
-        if (CurryHandler.current.get() != null) {
-            CurryHandler handler = CurryHandler.current.get();
-            CurryHandler.current.remove();
-            return new AutoCurryFunctionImpl<T>(handler.m, handler.o);
-        } else {
-            throw new IllegalStateException("You can't curry this object");
         }
     }
 

@@ -304,12 +304,12 @@ public class UtilsTest implements Utils {
 
     @Test
     public void curryTest() {
-        Option<Method> m = method(UtilsTest.class, "concat",
+        Option<CurryMethod<String>> m = method(this, String.class, "concat",
                     String.class, String.class, String.class);
-        Option<Method> m2 = method(UtilsTest.class, "concat",
+        Option<CurryMethod<String>> m2 = method(this, String.class, "concat",
                     Integer.class, String.class, Long.class);
         if (m.isDefined()) {
-            String value = curry(m, this, String.class)
+            String value = curryM(m)
                     ._("A")._("B")._("C")
                     .get();
 
@@ -317,7 +317,7 @@ public class UtilsTest implements Utils {
             Assert.assertEquals(expected, value);
 
             CurryFunction<String> function =
-                curry(m, this, String.class)
+                curryM(m)
                     ._("A")._("B");
             String value2 =
                 function
@@ -357,7 +357,7 @@ public class UtilsTest implements Utils {
         }
         if (m2.isDefined()) {
             CurryFunction<String> function =
-                curry(m2, this, String.class)
+                curryM(m2)
                     ._(new Long(3))._("2");
             String value5 =
                 function
