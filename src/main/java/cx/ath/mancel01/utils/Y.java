@@ -44,7 +44,7 @@ public class Y {
         }
     }
 
-    public static <T> CurryFunction<T> curryM(Option<CurryMethod<T>> m, Object... with) {
+    public static <T> CurryFunction<T> curryMethod(Option<CurryMethod<T>> m, Object... with) {
         if (m.isDefined()) {
             return new AutoCurryFunctionImpl<T>(m.get().m, m.get().on, with);
         } else {
