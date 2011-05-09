@@ -224,6 +224,13 @@ public class Y {
         }
     }
 
+    public static class Null {
+
+        public static <T> T type(Class<T> type) {
+            return null;
+        }
+    }
+
     /***************************************************************************
      *
      * WARNING : Highly dirty and experimental stuff, use with caution.
@@ -317,7 +324,9 @@ public class Y {
                                 getType(m.getReturnType().getName()).getName())
                                 .append(".class.cast").append("(");
                     } else {
-                        codeBuilder.append("return ").append("(").append(m.getReturnType().getName()).append(")");
+                        codeBuilder.append("return ").append(
+                                m.getReturnType().getName())
+                                .append(".class.cast").append("(");
                     }
                 }
                 codeBuilder.append(" call(\"").append(m.getName())
@@ -326,7 +335,7 @@ public class Y {
                 if (i > 0)
                     codeBuilder.append(", ");
                 codeBuilder.append(argsBuilder.toString()).append(")");
-                if (m.getReturnType().isPrimitive() && !m.getReturnType().equals(Void.TYPE)) {
+                if (!m.getReturnType().equals(Void.TYPE)) {
                     codeBuilder.append(")");
                 }
                 codeBuilder.append(";\n");

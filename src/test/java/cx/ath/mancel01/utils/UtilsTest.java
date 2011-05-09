@@ -418,7 +418,7 @@ public class UtilsTest implements Utils {
     public void curryTest3() {
         UtilsTest u = target(this);
 
-        String value = curry(u.concat(n, n, n))
+        String value = curry(u.concat(Null.type(String.class), Null.type(String.class), Null.type(String.class)))
                 ._("A")._("B")._("C")
                 .get();
 
