@@ -2,6 +2,14 @@ package cx.ath.mancel01.utils;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utilities for collections (inspired by Google Collections)
@@ -194,6 +202,10 @@ public class C {
         Filterable<T> execute(Function<T> action);
 
         <R> Filterable<R> apply(Transformation<T, R> transformation);
+
+        Filterable<T> parExecute(Function<T> action);
+
+        <R> Filterable<R> parApply(Transformation<T, R> transformation);
     }
 
     public static interface Joiner {
@@ -205,6 +217,8 @@ public class C {
         Joiner after(String after);
 
         String with(String separator);
+
+        String parWith(String separator);
     }
 
     public static interface Predicate<T> {
@@ -280,6 +294,21 @@ public class C {
         }
 
         @Override
+        public String parWith(String separator) {
+            this.separator = separator;
+            if (before != null) {
+                builder.append(before);
+            }
+            forEach(value).parExecute((Function) this);
+            if (before != null) {
+                builder.append(after);
+            }
+            String finalValue = builder.toString();
+            return finalValue.substring(0, finalValue.lastIndexOf(separator))
+                    + finalValue.substring(finalValue.lastIndexOf(separator) + separator.length());
+        }
+
+        @Override
         public <R> Joiner labelized(Transformation<R, String> tranformation) {
             this.label = tranformation;
             return this;
@@ -300,9 +329,15 @@ public class C {
 
     private static class EachImpl<T> implements Each<T> {
 
+        private static final int NBR_CORE =
+                Runtime.getRuntime().availableProcessors() + 1;
+
+        private final ExecutorService executor = 
+            Executors.newFixedThreadPool(NBR_CORE);
+
         private final Collection<T> baseCollection;
         
-        private Collection<T> workingCollection;
+        private List<T> workingCollection;
 
         public EachImpl(Collection<T> baseCollection) {
             this.baseCollection = baseCollection;
@@ -349,6 +384,94 @@ public class C {
             for (T element : workingCollection) {
                 tmp.add(transformation.apply(element));
             }
+            return new EachImpl<R>(tmp);
+        }
+
+        private Collection<Collection<T>> getBulkCollections() {
+            long start = System.currentTimeMillis();
+            initWorkingCollection();
+            Collection<Collection<T>> bulksCollections = new ArrayList<Collection<T>>();
+            int bulkSize = (workingCollection.size() / NBR_CORE);
+            int bulkCollectionSize = (workingCollection.size() / bulkSize) - 1;
+            int fromIndex = 0;
+            boolean again = true;
+            while (again) {
+                if (fromIndex > (workingCollection.size() - 1)) {
+                    break;
+                }
+                int toIndex = fromIndex + bulkCollectionSize;
+                if (toIndex > (workingCollection.size())) {
+                    toIndex = workingCollection.size();
+                    again = false;
+                }
+                Collection<T> bulk =
+                        workingCollection.subList(fromIndex, toIndex);
+                bulksCollections.add(bulk);
+                fromIndex = toIndex;
+            }
+            System.out.println("bulking : " + (System.currentTimeMillis() - start));
+            return bulksCollections;
+        }
+
+        @Override
+        public Filterable<T> parExecute(final Function<T> action) {
+            long start = System.currentTimeMillis();
+            Collection<Future<Void>> bulks = new ArrayList<Future<Void>>();
+            Collection<Collection<T>> bulkCollections = getBulkCollections();
+            for (final Collection<T> bulkCollection : bulkCollections) {
+                Callable<Void> bulk = new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        for (T element : bulkCollection) {
+                            action.apply(element);
+                        }
+                        return null;
+                    }
+                };
+                bulks.add(executor.submit(bulk));
+            }
+            System.out.println("submitting : " + (System.currentTimeMillis() - start));
+            start = System.currentTimeMillis();
+            for (Future<Void> f : bulks) {
+                try {
+                    f.get();
+                } catch (Exception ex) {
+                    //
+                }
+            }
+            System.out.println("waiting : " + (System.currentTimeMillis() - start));
+            return this;
+        }
+
+        @Override
+        public <R> Filterable<R> parApply(final Transformation<T, R> transformation) {
+            long start = System.currentTimeMillis();
+            Collection<R> tmp = new ArrayList<R>();
+            Collection<Future<Collection<R>>> bulks = new ArrayList<Future<Collection<R>>>();
+            Collection<Collection<T>> bulkCollections = getBulkCollections();
+            for (final Collection<T> bulkCollection : bulkCollections) {
+                Callable<Collection<R>> bulk = new Callable<Collection<R>>() {
+                    @Override
+                    public Collection<R> call() throws Exception {
+                        Collection<R> tmp = new ArrayList<R>();
+                        for (T element : bulkCollection) {
+                            tmp.add(transformation.apply(element));
+                        }
+                        return tmp;
+                    }
+                };
+                bulks.add(executor.submit(bulk));
+            }
+            System.out.println("submitting : " + (System.currentTimeMillis() - start));
+            start = System.currentTimeMillis();
+            for (Future<Collection<R>> f : bulks) {
+                try {
+                    tmp.addAll(f.get());
+                } catch (Exception ex) {
+                    //
+                }
+            }
+            System.out.println("waiting : " + (System.currentTimeMillis() - start));
             return new EachImpl<R>(tmp);
         }
 

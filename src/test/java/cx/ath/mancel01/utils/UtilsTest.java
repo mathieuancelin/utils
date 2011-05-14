@@ -1,6 +1,7 @@
 package cx.ath.mancel01.utils;
 
-import java.lang.reflect.Method;
+import java.util.Collections;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -30,6 +31,64 @@ public class UtilsTest implements Utils {
                     }
                 ).get();
         Assert.assertEquals(expected, result);
+    }
+
+    @Test
+    public void testParCollections() {
+        Collection<String> values = Arrays.asList(new String[]
+            {"Hello", "dude", ",", "how", "are", "you", "today", "!"});
+        Collection<String> expected = Arrays.asList(new String[]
+            {"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
+        Collection<String> result =
+            forEach(values)
+                .parApply(new Transformation<String, String>() {
+                        @Override
+                        public String apply(String t) {
+                            return t.toUpperCase();
+                        }
+                    }
+                ).get();
+        Assert.assertEquals(expected, result);
+    }
+
+    @Test
+    public void testSpeed() {
+        Collection<String> values = Collections.nCopies(100000, "hello");
+
+        long total = 0;
+        for (int i =  0; i < 10; i ++) {
+            long start = System.currentTimeMillis();
+            forEach(values)
+                .apply(new Transformation<String, String>() {
+                        @Override
+                        public String apply(String t) {
+                            return t.toUpperCase().toLowerCase().toLowerCase();
+                        }
+                    }
+                )
+            .get();
+            long time = (System.currentTimeMillis() - start);
+            total += time;
+            System.out.println(time);
+        }
+        System.out.println("time : " + (total / 10));
+        total = 0;
+        for (int i =  0; i < 10; i ++) {
+        long start = System.currentTimeMillis();
+            forEach(values)
+                .parApply(new Transformation<String, String>() {
+                        @Override
+                        public String apply(String t) {
+                            return t.toUpperCase().toLowerCase().toLowerCase();
+                        }
+                    }
+                )
+            .get();
+            long time = (System.currentTimeMillis() - start);
+            total += time;
+            System.out.println(time);
+        }
+        System.out.println("time : " + (total / 10));
     }
 
     @Test
