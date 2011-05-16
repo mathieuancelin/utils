@@ -97,7 +97,7 @@ public class UtilsTest implements Utils {
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
                 }
-                System.out.println(t);
+                //System.out.println(t);
             }
         };
         long start = System.currentTimeMillis();
@@ -170,6 +170,21 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(expectedCount, sum.count());
         sum = new Sum();
         forEach(values).filteredBy(greaterThan(0)).filteredBy(lesserThan(6)).execute(sum);
+        Assert.assertEquals(15, sum.sum());
+        Assert.assertEquals(5, sum.count());
+    }
+
+    @Test
+    public void testParCollections2() {
+        Collection<Integer> values = Arrays.asList(new Integer[]{1, 2, 3, 4, 5, 6, -8, -2, -1, -28});
+        int expectedTotal = 21;
+        int expectedCount = 6;
+        Sum sum = new Sum();
+        forEach(values).parFilteredBy(greaterThan(0)).parExecute(sum);
+        Assert.assertEquals(expectedTotal, sum.sum());
+        Assert.assertEquals(expectedCount, sum.count());
+        sum = new Sum();
+        forEach(values).parFilteredBy(greaterThan(0)).parFilteredBy(lesserThan(6)).parExecute(sum);
         Assert.assertEquals(15, sum.sum());
         Assert.assertEquals(5, sum.count());
     }

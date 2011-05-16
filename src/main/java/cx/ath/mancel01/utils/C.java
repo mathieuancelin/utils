@@ -400,8 +400,8 @@ public class C {
                     break;
                 }
                 int toIndex = (fromIndex - 1) + bulkCollectionSize;
-                if (toIndex > workingCollection.size()) {
-                    toIndex = workingCollection.size();
+                if (toIndex > (workingCollection.size() - 1)) {
+                    toIndex = (workingCollection.size() - 1);
                     again = false;
                 }
                 bulksCollections.add(new Bound(fromIndex, toIndex));
@@ -425,7 +425,7 @@ public class C {
                 try {
                     f.get();
                 } catch (Exception ex) {
-                    //
+                    ex.printStackTrace();
                 }
             }
             return this;
@@ -447,7 +447,7 @@ public class C {
                 try {
                     tmp.addAll(f.get());
                 } catch (Exception ex) {
-                    //
+                    ex.printStackTrace();
                 }
             }
             return new EachImpl<R>(tmp);
@@ -470,7 +470,7 @@ public class C {
                 try {
                     tmp.addAll(f.get());
                 } catch (Exception ex) {
-                    //
+                    ex.printStackTrace();
                 }
             }
             for (T element : tmp) {
@@ -509,7 +509,6 @@ public class C {
 
         @Override
         public Collection<T> call() throws Exception {
-
             Collection<T> tmp = new ArrayList<T>();
             for (int i = bound.fromIndex; i < (bound.toIndex + 1); i++) {
                 T element = collection.get(i);
