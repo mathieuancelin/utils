@@ -38,6 +38,26 @@ public class C {
         return new JoinerImpl(collection);
     }
 
+    public static <T> List<List<T>> paginate(List<T> list, int size) {
+        List<List<T>> collections = new ArrayList<List<T>>();
+        int fromIndex = 0;
+        boolean again = true;
+        while (again) {
+            if (fromIndex > list.size()) {
+                break;
+            }
+            int toIndex = (fromIndex - 1) + size;
+            if (toIndex > (list.size() - 1)) {
+                toIndex = (list.size() - 1);
+                again = false;
+            }
+            collections.add(list.subList(fromIndex, toIndex));
+            fromIndex = toIndex + 1;
+        }
+        return collections;
+        
+    }
+
     public static Predicate<String> eq(final String value) {
         return new Predicate<String>() {
             @Override
