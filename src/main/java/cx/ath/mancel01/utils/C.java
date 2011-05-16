@@ -4,12 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Utilities for collections (inspired by Google Collections)
@@ -199,6 +196,9 @@ public class C {
         @Override
         Each<T> filteredBy(Predicate<T> predicate);
 
+        @Override
+        Each<T> parFilteredBy(Predicate<T> predicate);
+
         Filterable<T> execute(Function<T> action);
 
         <R> Filterable<R> apply(Transformation<T, R> transformation);
@@ -239,6 +239,8 @@ public class C {
     public static interface Filterable<T> {
         
         Filterable<T> filteredBy(Predicate<T> predicate);
+
+        Filterable<T> parFilteredBy(Predicate<T> predicate);
 
         Collection<T> get();
 
@@ -387,92 +389,94 @@ public class C {
             return new EachImpl<R>(tmp);
         }
 
-        private Collection<Collection<T>> getBulkCollections() {
-            long start = System.currentTimeMillis();
-            initWorkingCollection();
-            Collection<Collection<T>> bulksCollections = new ArrayList<Collection<T>>();
-            int bulkSize = (workingCollection.size() / NBR_CORE);
-            int bulkCollectionSize = (workingCollection.size() / bulkSize) - 1;
+
+        private Collection<Bound> getBulkBounds() {
+            Collection<Bound> bulksCollections = new ArrayList<Bound>();
+            int bulkCollectionSize = (workingCollection.size() / NBR_CORE);
             int fromIndex = 0;
             boolean again = true;
             while (again) {
-                if (fromIndex > (workingCollection.size() - 1)) {
+                if (fromIndex > workingCollection.size()) {
                     break;
                 }
-                int toIndex = fromIndex + bulkCollectionSize;
-                if (toIndex > (workingCollection.size())) {
+                int toIndex = (fromIndex - 1) + bulkCollectionSize;
+                if (toIndex > workingCollection.size()) {
                     toIndex = workingCollection.size();
                     again = false;
                 }
-                Collection<T> bulk =
-                        workingCollection.subList(fromIndex, toIndex);
-                bulksCollections.add(bulk);
-                fromIndex = toIndex;
+                bulksCollections.add(new Bound(fromIndex, toIndex));
+                fromIndex = toIndex + 1;
             }
-            System.out.println("bulking : " + (System.currentTimeMillis() - start));
             return bulksCollections;
         }
 
         @Override
         public Filterable<T> parExecute(final Function<T> action) {
-            long start = System.currentTimeMillis();
-            Collection<Future<Void>> bulks = new ArrayList<Future<Void>>();
-            Collection<Collection<T>> bulkCollections = getBulkCollections();
-            for (final Collection<T> bulkCollection : bulkCollections) {
-                Callable<Void> bulk = new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        for (T element : bulkCollection) {
-                            action.apply(element);
-                        }
-                        return null;
-                    }
-                };
-                bulks.add(executor.submit(bulk));
+            Collection<Future<Void>> bulkExecutions = new ArrayList<Future<Void>>();
+            initWorkingCollection();
+            Collection<Bound> bulkBounds = getBulkBounds();
+            for (Bound bound : bulkBounds) {
+                bulkExecutions.add(
+                    executor.submit(
+                        new BulkExecution<T>(
+                            action, workingCollection, bound)));
             }
-            System.out.println("submitting : " + (System.currentTimeMillis() - start));
-            start = System.currentTimeMillis();
-            for (Future<Void> f : bulks) {
+            for (Future<Void> f : bulkExecutions) {
                 try {
                     f.get();
                 } catch (Exception ex) {
                     //
                 }
             }
-            System.out.println("waiting : " + (System.currentTimeMillis() - start));
             return this;
         }
 
         @Override
         public <R> Filterable<R> parApply(final Transformation<T, R> transformation) {
-            long start = System.currentTimeMillis();
             Collection<R> tmp = new ArrayList<R>();
-            Collection<Future<Collection<R>>> bulks = new ArrayList<Future<Collection<R>>>();
-            Collection<Collection<T>> bulkCollections = getBulkCollections();
-            for (final Collection<T> bulkCollection : bulkCollections) {
-                Callable<Collection<R>> bulk = new Callable<Collection<R>>() {
-                    @Override
-                    public Collection<R> call() throws Exception {
-                        Collection<R> tmp = new ArrayList<R>();
-                        for (T element : bulkCollection) {
-                            tmp.add(transformation.apply(element));
-                        }
-                        return tmp;
-                    }
-                };
-                bulks.add(executor.submit(bulk));
+            Collection<Future<Collection<R>>> bulkExecutions = new ArrayList<Future<Collection<R>>>();
+            initWorkingCollection();
+            Collection<Bound> bulkBounds = getBulkBounds();
+            for (Bound bound : bulkBounds) {
+                bulkExecutions.add(
+                    executor.submit(
+                        new BulkTransformation<T, R>(
+                            transformation, workingCollection, bound)));
             }
-            System.out.println("submitting : " + (System.currentTimeMillis() - start));
-            start = System.currentTimeMillis();
-            for (Future<Collection<R>> f : bulks) {
+            for (Future<Collection<R>> f : bulkExecutions) {
                 try {
                     tmp.addAll(f.get());
                 } catch (Exception ex) {
                     //
                 }
             }
-            System.out.println("waiting : " + (System.currentTimeMillis() - start));
             return new EachImpl<R>(tmp);
+        }
+
+        @Override
+        public Each<T> parFilteredBy(Predicate<T> predicate) {
+            Collection<T> tmp = new ArrayList<T>();
+            Collection<Future<Collection<T>>> bulkExecutions = 
+                    new ArrayList<Future<Collection<T>>>();
+            initWorkingCollection();
+            Collection<Bound> bulkBounds = getBulkBounds();
+            for (Bound bound : bulkBounds) {
+                bulkExecutions.add(
+                    executor.submit(
+                        new BulkFilter<T>(
+                            predicate, workingCollection, bound)));
+            }
+            for (Future<Collection<T>> f : bulkExecutions) {
+                try {
+                    tmp.addAll(f.get());
+                } catch (Exception ex) {
+                    //
+                }
+            }
+            for (T element : tmp) {
+                workingCollection.remove(element);
+            }
+            return this;
         }
 
         @Override
@@ -488,6 +492,90 @@ public class C {
         @Override
         public boolean isEmpty() {
             return workingCollection.isEmpty();
+        }
+    }
+
+    private static class BulkFilter<T> implements Callable<Collection<T>> {
+
+        private final Predicate<T> predicate;
+        private final List<T> collection;
+        private final Bound bound;
+
+        public BulkFilter(Predicate<T> predicate, List<T> collection, Bound bound) {
+            this.predicate = predicate;
+            this.collection = collection;
+            this.bound = bound;
+        }
+
+        @Override
+        public Collection<T> call() throws Exception {
+
+            Collection<T> tmp = new ArrayList<T>();
+            for (int i = bound.fromIndex; i < (bound.toIndex + 1); i++) {
+                T element = collection.get(i);
+                if (!predicate.apply(element)) {
+                    tmp.add(element);
+                }
+            }
+            return tmp;
+        }
+    }
+
+    private static class BulkExecution<T> implements Callable<Void> {
+
+        private final Function<T> action;
+        private final List<T> collection;
+        private final Bound bound;
+
+        public BulkExecution(Function<T> action, List<T> collection, Bound bound) {
+            this.action = action;
+            this.collection = collection;
+            this.bound = bound;
+        }
+
+        @Override
+        public Void call() throws Exception {
+            for (int i = bound.fromIndex; i < (bound.toIndex + 1); i++) {
+                action.apply(collection.get(i));
+            }
+            return null;
+        }
+    }
+
+    private static class BulkTransformation<T, R> implements Callable<Collection<R>> {
+
+        private final Transformation<T, R> transfo;
+        private final List<T> collection;
+        private final Bound bound;
+
+        public BulkTransformation(Transformation<T, R> transfo, List<T> collection, Bound bound) {
+            this.transfo = transfo;
+            this.collection = collection;
+            this.bound = bound;
+        }
+
+        @Override
+        public Collection<R> call() throws Exception {
+            Collection<R> tmp = new ArrayList<R>();
+            for (int i = bound.fromIndex; i < (bound.toIndex + 1); i++) {
+                tmp.add(transfo.apply(collection.get(i)));
+            }
+            return tmp;
+        }
+    }
+
+    private static class Bound {
+        final int fromIndex;
+        final int toIndex;
+
+        public Bound(int fromIndex, int toIndex) {
+            this.fromIndex = fromIndex;
+            this.toIndex = toIndex;
+        }
+
+        @Override
+        public String toString() {
+            return "Bound [ from=" + fromIndex + ", to=" + toIndex + " ]";
         }
     }
 }

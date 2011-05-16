@@ -1,10 +1,12 @@
 package cx.ath.mancel01.utils;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -17,89 +19,107 @@ public class UtilsTest implements Utils {
 
     @Test
     public void testCollections() {
-        Collection<String> values = Arrays.asList(new String[]
-            {"Hello", "dude", ",", "how", "are", "you", "today", "!"});
-        Collection<String> expected = Arrays.asList(new String[]
-            {"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
-        Collection<String> result = 
-            forEach(values)
-                .apply(new Transformation<String, String>() {
-                        @Override
-                        public String apply(String t) {
-                            return t.toUpperCase();
-                        }
-                    }
-                ).get();
+        Collection<String> values = Arrays.asList(new String[]{"Hello", "dude", ",", "how", "are", "you", "today", "!"});
+        Collection<String> expected = Arrays.asList(new String[]{"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
+        Collection<String> result =
+                forEach(values).apply(new Transformation<String, String>() {
+
+            @Override
+            public String apply(String t) {
+                return t.toUpperCase();
+            }
+        }).get();
         Assert.assertEquals(expected, result);
     }
 
     @Test
     public void testParCollections() {
-        Collection<String> values = Arrays.asList(new String[]
-            {"Hello", "dude", ",", "how", "are", "you", "today", "!"});
-        Collection<String> expected = Arrays.asList(new String[]
-            {"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
+        Collection<String> values = Arrays.asList(new String[]{"Hello", "dude", ",", "how", "are", "you", "today", "!"});
+        Collection<String> expected = Arrays.asList(new String[]{"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
         Collection<String> result =
-            forEach(values)
-                .parApply(new Transformation<String, String>() {
-                        @Override
-                        public String apply(String t) {
-                            return t.toUpperCase();
-                        }
-                    }
-                ).get();
+                forEach(values).parApply(new Transformation<String, String>() {
+
+            @Override
+            public String apply(String t) {
+                return t.toUpperCase();
+            }
+        }).get();
         Assert.assertEquals(expected, result);
     }
 
     @Test
     public void testSpeed() {
-        Collection<String> values = Collections.nCopies(100000, "hello");
+        Collection<String> values = Collections.nCopies(100001, "hello");
 
         long total = 0;
-        for (int i =  0; i < 10; i ++) {
+        for (int i = 0; i < 10; i++) {
             long start = System.currentTimeMillis();
-            forEach(values)
-                .apply(new Transformation<String, String>() {
-                        @Override
-                        public String apply(String t) {
-                            return t.toUpperCase().toLowerCase().toLowerCase();
-                        }
-                    }
-                )
-            .get();
+            forEach(values).apply(new Transformation<String, String>() {
+
+                @Override
+                public String apply(String t) {
+                    return t.toUpperCase().toLowerCase().toLowerCase();
+                }
+            }).get();
             long time = (System.currentTimeMillis() - start);
             total += time;
-            System.out.println(time);
         }
         System.out.println("time : " + (total / 10));
         total = 0;
-        for (int i =  0; i < 10; i ++) {
-        long start = System.currentTimeMillis();
-            forEach(values)
-                .parApply(new Transformation<String, String>() {
-                        @Override
-                        public String apply(String t) {
-                            return t.toUpperCase().toLowerCase().toLowerCase();
-                        }
-                    }
-                )
-            .get();
+        for (int i = 0; i < 10; i++) {
+            long start = System.currentTimeMillis();
+            forEach(values).parApply(new Transformation<String, String>() {
+
+                @Override
+                public String apply(String t) {
+                    return t.toUpperCase().toLowerCase().toLowerCase();
+                }
+            }).get();
             long time = (System.currentTimeMillis() - start);
             total += time;
-            System.out.println(time);
         }
-        System.out.println("time : " + (total / 10));
+        System.out.println("time par : " + (total / 10));
+    }
+
+    @Test
+    public void testSpeed2() {
+        Collection<Integer> values = new ArrayList<Integer>();
+        for (int i = 0; i < 100; i++) {
+            values.add(i);
+        }
+        Function<Integer> show = new Function<Integer>() {
+
+            @Override
+            public void apply(Integer t) {
+                long sleep = 100 + (long) (Math.random() * 10);
+                try {
+                    Thread.sleep(sleep);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+                System.out.println(t);
+            }
+        };
+        long start = System.currentTimeMillis();
+        forEach(values).execute(show).get();
+        long time = (System.currentTimeMillis() - start);
+        System.out.println("time : " + time);
+        start = System.currentTimeMillis();
+        forEach(values).parExecute(show).get();
+        time = (System.currentTimeMillis() - start);
+        System.out.println("time par : " + time);
     }
 
     @Test
     public void testJoin() {
-        Collection<String> values = Arrays.asList(new String[] {"Hello", "dude", "!"});
+        Collection<String> values = Arrays.asList(new String[]{"Hello", "dude", "!"});
         String expected1 = "Hello | dude | !";
         String expected2 = "HELLO | DUDE | !";
         String expected3 = "before => HELLO | DUDE | ! <= after";
         String join1 = join(values).with(" | ");
         Assert.assertEquals(expected1, join1);
         String join2 = join(values).labelized(new Transformation<String, String>() {
+
             @Override
             public String apply(String t) {
                 return t.toUpperCase();
@@ -107,21 +127,22 @@ public class UtilsTest implements Utils {
         }).with(" | ");
         Assert.assertEquals(expected2, join2);
         String join3 = join(values).labelized(new Transformation<String, String>() {
+
             @Override
             public String apply(String t) {
                 return t.toUpperCase();
             }
-        }).before("before => ").after(" <= after").with(" | ");        
+        }).before("before => ").after(" <= after").with(" | ");
         Assert.assertEquals(expected3, join3);
     }
 
     @Test
     public void testTransformation() {
-        Collection<Person> values = Arrays.asList(new Person[]
-            {new Person("John", "Doe"), new Person("John", "Adams")});
-        Collection<String> expected = Arrays.asList(new String[] {"John", "John"}); 
+        Collection<Person> values = Arrays.asList(new Person[]{new Person("John", "Doe"), new Person("John", "Adams")});
+        Collection<String> expected = Arrays.asList(new String[]{"John", "John"});
         String expected1 = "John | John";
         Collection<String> transformed = forEach(values).apply(new Transformation<Person, String>() {
+
             @Override
             public String apply(Person t) {
                 return t.getName();
@@ -129,6 +150,7 @@ public class UtilsTest implements Utils {
         }).get();
         Assert.assertEquals(expected, transformed);
         String join1 = join(values).labelized(new Transformation<Person, String>() {
+
             @Override
             public String apply(Person t) {
                 return t.getName();
@@ -139,21 +161,15 @@ public class UtilsTest implements Utils {
 
     @Test
     public void testCollections2() {
-        Collection<Integer> values = Arrays.asList(new Integer[]
-            {1, 2, 3, 4, 5, 6, -8, -2, -1, -28});
+        Collection<Integer> values = Arrays.asList(new Integer[]{1, 2, 3, 4, 5, 6, -8, -2, -1, -28});
         int expectedTotal = 21;
         int expectedCount = 6;
         Sum sum = new Sum();
-        forEach(values)
-            .filteredBy(greaterThan(0))
-                .execute(sum);
+        forEach(values).filteredBy(greaterThan(0)).execute(sum);
         Assert.assertEquals(expectedTotal, sum.sum());
         Assert.assertEquals(expectedCount, sum.count());
         sum = new Sum();
-        forEach(values)
-            .filteredBy(greaterThan(0))
-            .filteredBy(lesserThan(6))
-                .execute(sum);
+        forEach(values).filteredBy(greaterThan(0)).filteredBy(lesserThan(6)).execute(sum);
         Assert.assertEquals(15, sum.sum());
         Assert.assertEquals(5, sum.count());
     }
@@ -162,69 +178,41 @@ public class UtilsTest implements Utils {
     public void testPatternMatching() {
         String value = "foobar";
         Option<String> matched =
-            match(value)
-                .andExpect(String.class)
-                    .with(
-                        caseEquals("one")
-                            .then(new OneFunction()),
-                        caseEquals("two")
-                            .then(new TwoFunction()),
-                        caseEquals("three")
-                            .then(new ThreeFunction()),
-                        otherCases()
-                            .then(new OtherFunction())
-                    );
+                match(value).andExpect(String.class).with(
+                caseEquals("one").then(new OneFunction()),
+                caseEquals("two").then(new TwoFunction()),
+                caseEquals("three").then(new ThreeFunction()),
+                otherCases().then(new OtherFunction()));
         Assert.assertEquals(matched.get(), "-1");
-        
+
         value = "one";
         matched =
-            match(value)
-                .andExpect(String.class)
-                    .with(
-                        caseEquals("one")
-                            .then(new OneFunction()),
-                        caseEquals("two")
-                            .then(new TwoFunction()),
-                        caseEquals("three")
-                            .then(new ThreeFunction()),
-                        otherCases()
-                            .then(new OtherFunction())
-                    );
+                match(value).andExpect(String.class).with(
+                caseEquals("one").then(new OneFunction()),
+                caseEquals("two").then(new TwoFunction()),
+                caseEquals("three").then(new ThreeFunction()),
+                otherCases().then(new OtherFunction()));
         Assert.assertEquals(matched.get(), "It's a one");
-        
+
         value = "two";
         matched =
-            match(value)
-                .andExpect(String.class)
-                    .with(
-                        caseEquals("one")
-                            .then(new OneFunction()),
-                        caseEquals("two")
-                            .then(new TwoFunction()),
-                        caseEquals("three")
-                            .then(new ThreeFunction()),
-                        otherCases()
-                            .then(new OtherFunction())
-                    );
+                match(value).andExpect(String.class).with(
+                caseEquals("one").then(new OneFunction()),
+                caseEquals("two").then(new TwoFunction()),
+                caseEquals("three").then(new ThreeFunction()),
+                otherCases().then(new OtherFunction()));
         Assert.assertEquals(matched.get(), "It's a two");
-        
+
         value = "three";
         matched =
-            match(value)
-                .andExpect(String.class)
-                    .with(
-                        caseEquals("one")
-                            .then(new OneFunction()),
-                        caseEquals("two")
-                            .then(new TwoFunction()),
-                        caseEquals("three")
-                            .then(new ThreeFunction()),
-                        otherCases()
-                            .then(new OtherFunction())
-                    );
+                match(value).andExpect(String.class).with(
+                caseEquals("one").then(new OneFunction()),
+                caseEquals("two").then(new TwoFunction()),
+                caseEquals("three").then(new ThreeFunction()),
+                otherCases().then(new OtherFunction()));
         Assert.assertEquals(matched.get(), "It's a three");
 
-        
+
     }
 
     @Test
@@ -286,76 +274,52 @@ public class UtilsTest implements Utils {
     public void testPatternMatching3() {
         String value = "one";
         String ret = "-1";
-        for (String s : with(caseEquals("one"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("one")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a one";
         }
-        for (String s : with(caseEquals("two"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("two")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a two";
         }
-        for (String s : with(caseEquals("three"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("three")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "It's a one");
 
         value = "two";
         ret = "-1";
-        for (String s : with(caseEquals("one"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("one")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a one";
         }
-        for (String s : with(caseEquals("two"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("two")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a two";
         }
-        for (String s : with(caseEquals("three"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("three")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "It's a two");
 
         value = "three";
         ret = "-1";
-        for (String s : with(caseEquals("one"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("one")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a one";
         }
-        for (String s : with(caseEquals("two"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("two")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a two";
         }
-        for (String s : with(caseEquals("three"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("three")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "It's a three");
 
         value = "foobar";
         ret = "-1";
-        for (String s : with(caseEquals("one"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("one")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a one";
         }
-        for (String s : with(caseEquals("two"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("two")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a two";
         }
-        for (String s : with(caseEquals("three"))
-                            .and(caseLengthGreater(2))
-                                .match(value)) {
+        for (String s : with(caseEquals("three")).and(caseLengthGreater(2)).match(value)) {
             ret = "It's a three";
         }
         Assert.assertEquals(ret, "-1");
@@ -364,51 +328,37 @@ public class UtilsTest implements Utils {
     @Test
     public void curryTest() {
         Option<CurryMethod<String>> m = method(this, String.class, "concat",
-                    String.class, String.class, String.class);
+                String.class, String.class, String.class);
         Option<CurryMethod<String>> m2 = method(this, String.class, "concat",
-                    Integer.class, String.class, Long.class);
+                Integer.class, String.class, Long.class);
         if (m.isDefined()) {
-            String value = curryMethod(m)
-                    ._("A")._("B")._("C")
-                    .get();
+            String value = curryMethod(m)._("A")._("B")._("C").get();
 
             String expected = "ABC";
             Assert.assertEquals(expected, value);
 
             CurryFunction<String> function =
-                curryMethod(m)
-                    ._("A")._("B");
+                    curryMethod(m)._("A")._("B");
             String value2 =
-                function
-                    ._("C")
-                    .get();
+                    function._("C").get();
             String value22 =
-                function
-                    ._("D")
-                    .get();
+                    function._("D").get();
             String value222 =
-                function
-                    ._("E")
-                    .get();
+                    function._("E").get();
 
             Assert.assertEquals(expected, value2);
             Assert.assertEquals("ABD", value22);
             Assert.assertEquals("ABE", value222);
 
             String value3 =
-                new MyCurryFunction()
-                    ._("A")._("B")._("C")
-                    .get();
-            
+                    new MyCurryFunction()._("A")._("B")._("C").get();
+
             Assert.assertEquals(expected, value3);
 
             CurryFunction<String> function2 =
-                new MyCurryFunction()
-                    ._("A");
+                    new MyCurryFunction()._("A");
             String value4 =
-                function2
-                    ._("B")._("C")
-                    .get();
+                    function2._("B")._("C").get();
 
             Assert.assertEquals(expected, value4);
         } else {
@@ -416,58 +366,44 @@ public class UtilsTest implements Utils {
         }
         if (m2.isDefined()) {
             CurryFunction<String> function =
-                curryMethod(m2)
-                    ._(new Long(3))._("2");
+                    curryMethod(m2)._(new Long(3))._("2");
             String value5 =
-                function
-                    ._(1)
-                    .get();
-            
+                    function._(1).get();
+
             String expected = "123";
             Assert.assertEquals(expected, value5);
         } else {
             Assert.fail("Method not defined");
         }
     }
-
     private String n = null;
 
     @Test
     public void curryTest2() {
         Utils u = target(this, Utils.class);
 
-        String value = curry(u.concat(n, n, n))
-                ._("A")._("B")._("C")
-                .get();
+        String value = curry(u.concat(n, n, n))._("A")._("B")._("C").get();
 
         String expected = "ABC";
         Assert.assertEquals(expected, value);
 
         CurryFunction<String> function =
-            curry(u.concat(n, n, n))
-                ._("A")._("B");
+                curry(u.concat(n, n, n))._("A")._("B");
         String value2 =
-            function
-                ._("C")
-                .get();
+                function._("C").get();
         String value22 =
-            function
-                ._("D")
-                .get();
+                function._("D").get();
         String value222 =
-            function
-                ._("E")
-                .get();
+                function._("E").get();
 
         Assert.assertEquals(expected, value2);
         Assert.assertEquals("ABD", value22);
         Assert.assertEquals("ABE", value222);
 
         function =
-            curry(u.concat(0, n, 0L))
-                ._(new Long(3))._("2");
+                curry(u.concat(0, n, 0L))._(new Long(3))._("2");
         String value5 =
-            function._(1).get();
+                function._(1).get();
 
         expected = "123";
         Assert.assertEquals(expected, value5);
@@ -477,38 +413,28 @@ public class UtilsTest implements Utils {
     public void curryTest3() {
         UtilsTest u = target(this);
 
-        String value = curry(u.concat(Null.type(String.class), Null.type(String.class), Null.type(String.class)))
-                ._("A")._("B")._("C")
-                .get();
+        String value = curry(u.concat(Null.type(String.class), Null.type(String.class), Null.type(String.class)))._("A")._("B")._("C").get();
 
         String expected = "ABC";
         Assert.assertEquals(expected, value);
 
         CurryFunction<String> function =
-            curry(u.concat(n, n, n))
-                ._("A")._("B");
+                curry(u.concat(n, n, n))._("A")._("B");
         String value2 =
-            function
-                ._("C")
-                .get();
+                function._("C").get();
         String value22 =
-            function
-                ._("D")
-                .get();
+                function._("D").get();
         String value222 =
-            function
-                ._("E")
-                .get();
+                function._("E").get();
 
         Assert.assertEquals(expected, value2);
         Assert.assertEquals("ABD", value22);
         Assert.assertEquals("ABE", value222);
 
         function =
-            curry(u.concat(0, n, 0L))
-                ._(new Long(3))._("2");
+                curry(u.concat(0, n, 0L))._(new Long(3))._("2");
         String value5 =
-            function._(1).get();
+                function._(1).get();
 
         expected = "123";
         Assert.assertEquals(expected, value5);
@@ -572,9 +498,8 @@ public class UtilsTest implements Utils {
     }
 
     private class Sum implements Function<Integer> {
-        
-        private int value = 0;
 
+        private int value = 0;
         private int items = 0;
 
         public void add(int i) {
@@ -597,9 +522,8 @@ public class UtilsTest implements Utils {
     }
 
     private class Person {
-        
-        private String name;
 
+        private String name;
         private String surname;
 
         public Person(String name, String surname) {
