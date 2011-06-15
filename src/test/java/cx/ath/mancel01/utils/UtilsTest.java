@@ -19,6 +19,7 @@ public class UtilsTest implements Utils {
     public void testMonads() {
         String base = "Hello !";
         Monad<String, Object> val = Monadic.monad(base);
+        
         Functor<String, String> t = new Functor<String, String>() {
 
             @Override
@@ -27,6 +28,7 @@ public class UtilsTest implements Utils {
                 return new Tuple<String, String>(result, result);
             }
         };
+        
         Functor<String, String> t2 = new Functor<String, String>() {
 
             @Override
@@ -56,13 +58,42 @@ public class UtilsTest implements Utils {
 
             @Override
             public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
-                Boolean result = monad.get().disconnect();
+                Boolean result = (Boolean) monad.unit().get();
+                if (result) {
+                    result = monad.get().disconnect();
+                }
                 return new Tuple<Socket, Boolean>(monad.get(), result);
             }
         };
+        
+        Functor<BadSocket, Boolean> connect2 = new Functor<BadSocket, Boolean>() {
+
+            @Override
+            public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
+                Boolean result = monad.get().connect();
+                return new Tuple<BadSocket, Boolean>(monad.get(), result);
+            }
+        };
+        
+        Functor<BadSocket, Boolean> disconnect2 = new Functor<BadSocket, Boolean>() {
+
+            @Override
+            public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
+                Boolean result = (Boolean) monad.unit().get();
+                if (result) {
+                    monad.get().disconnect();
+                }
+                return new Tuple<BadSocket, Boolean>(monad.get(), result);
+            }
+        };
+        
         SendFunction send = new SendFunction();
+        SendFunction2 send2 = new SendFunction2();
         Monad<Socket, Object> socket = Monadic.monad(new Socket());
+        Monad<BadSocket, Object> socket2 = Monadic.monad(new BadSocket());
+        
         socket.bind(connect).bind(send.text("Hello")).bind(disconnect);
+        socket2.bind(connect2).bind(send2.text("Hello")).bind(disconnect2);
     }
 
     @Test
@@ -606,30 +637,39 @@ public class UtilsTest implements Utils {
     private class Socket {
         
         public Boolean connect() {
+            System.out.println("Connect socket ...");
             return true;
         }
         
         public Boolean send(String t) {
+            System.out.println("send " + t);
             return true;
         }
         
         public Boolean disconnect() {
+            System.out.println("Disconnect socket !");
             return true;
         }
     }
     
-    private class BadSocket {
+    private class BadSocket extends Socket {
         
+        @Override
         public Boolean connect() {
-            return true;
+            System.out.println("Connect bad socket ...");
+            return false;
         }
         
+        @Override
         public Boolean send(String t) {
-            return true;
+            System.out.println("bad send " + t);
+            return false;
         }
         
+        @Override
         public Boolean disconnect() {
-            return true;
+            System.out.println("Disconnect bad socket !");
+            return false;
         }
     }
     
@@ -644,7 +684,32 @@ public class UtilsTest implements Utils {
 
         @Override
         public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+            
+            Boolean result = (Boolean) monad.unit().get();
+            if (result) {
+                monad.get().send(text);
+            }
             return new Tuple<UtilsTest.Socket, Boolean>(monad.get(), Boolean.TRUE);
+        }
+    }
+    
+    private class SendFunction2 implements Functor<BadSocket, Boolean> {
+        
+        private String text = "";
+        
+        public SendFunction2 text(String text) {
+            this.text = text;
+            return this;
+        }
+
+        @Override
+        public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
+            
+            Boolean result = (Boolean) monad.unit().get();
+            if (result) {
+                result = monad.get().send(text);
+            }
+            return new Tuple<UtilsTest.BadSocket, Boolean>(monad.get(), result);
         }
     }
 }

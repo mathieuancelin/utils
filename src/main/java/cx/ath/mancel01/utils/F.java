@@ -409,4 +409,19 @@ public class F {
             return new Monadic<T, Object>(value, Option.none());
         } 
     }
+    
+    public static class NoneMonad<T, R> extends Monadic<T, R> {
+
+        private final Option<Object> unit;
+        
+        public NoneMonad(T input, Option<R> ret, Option<Object> unit) {
+            super(input, ret);
+            this.unit = unit;
+        }
+
+        @Override
+        public <V> Monad<T, V> bind(Functor<T, V> func) {
+            return new NoneMonad<T, V>(get(), (Option<V>) Option.none(), unit);
+        }
+    }
 }
