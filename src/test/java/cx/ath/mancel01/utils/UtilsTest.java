@@ -5,8 +5,6 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -16,6 +14,56 @@ import static cx.ath.mancel01.utils.M.*;
 import static cx.ath.mancel01.utils.Y.*;
 
 public class UtilsTest implements Utils {
+    
+    @Test
+    public void testMonads() {
+        String base = "Hello !";
+        Monad<String, Object> val = Monadic.monad(base);
+        Functor<String, String> t = new Functor<String, String>() {
+
+            @Override
+            public Tuple<String, String> apply(Monad<String, ?> monad) {
+                String result = monad.get().toUpperCase();
+                return new Tuple<String, String>(result, result);
+            }
+        };
+        Functor<String, String> t2 = new Functor<String, String>() {
+
+            @Override
+            public Tuple<String, String> apply(Monad<String, ?> monad) {
+                String result = monad.get() + monad.get();
+                return new Tuple<String, String>(result, result);
+            }
+        };
+        
+        String ret1 = val.bind(t).unit().getOrElse("fail");
+        String ret2 = val.bind(t2).unit().getOrElse("fail");
+        String ret3 = val.bind(t).bind(t2).unit().getOrElse("fail");
+        Assert.assertEquals(ret1, base.toUpperCase());
+        Assert.assertEquals(ret2, base + base);
+        Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
+        
+        Functor<Socket, Boolean> connect = new Functor<Socket, Boolean>() {
+
+            @Override
+            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+                Boolean result = monad.get().connect();
+                return new Tuple<Socket, Boolean>(monad.get(), result);
+            }
+        };
+        
+        Functor<Socket, Boolean> disconnect = new Functor<Socket, Boolean>() {
+
+            @Override
+            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+                Boolean result = monad.get().disconnect();
+                return new Tuple<Socket, Boolean>(monad.get(), result);
+            }
+        };
+        SendFunction send = new SendFunction();
+        Monad<Socket, Object> socket = Monadic.monad(new Socket());
+        socket.bind(connect).bind(send.text("Hello")).bind(disconnect);
+    }
 
     @Test
     public void testCollections() {
@@ -552,6 +600,51 @@ public class UtilsTest implements Utils {
 
         public String getSurname() {
             return surname;
+        }
+    }
+    
+    private class Socket {
+        
+        public Boolean connect() {
+            return true;
+        }
+        
+        public Boolean send(String t) {
+            return true;
+        }
+        
+        public Boolean disconnect() {
+            return true;
+        }
+    }
+    
+    private class BadSocket {
+        
+        public Boolean connect() {
+            return true;
+        }
+        
+        public Boolean send(String t) {
+            return true;
+        }
+        
+        public Boolean disconnect() {
+            return true;
+        }
+    }
+    
+    private class SendFunction implements Functor<Socket, Boolean> {
+        
+        private String text = "";
+        
+        public SendFunction text(String text) {
+            this.text = text;
+            return this;
+        }
+
+        @Override
+        public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+            return new Tuple<UtilsTest.Socket, Boolean>(monad.get(), Boolean.TRUE);
         }
     }
 }

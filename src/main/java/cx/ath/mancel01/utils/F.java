@@ -15,14 +15,14 @@ public class F {
     final static None<Object> none = new None<Object>();
 
     public static abstract class Option<T> implements Iterable<T> {
-
+        
         public abstract boolean isDefined();
 
         public abstract boolean isEmpty();
+        
+        public abstract T get();
 
         public abstract Option<T> orElse(T value);
-
-        public abstract T get();
 
         public abstract T getOrElse(T value);
 
@@ -120,6 +120,68 @@ public class F {
             return this;
         }
     }
+    
+    /**
+     * A not so good version of some. Mostly used to wrap
+     * return of library methods.
+     *
+     * @param <T>
+     */
+    public static class Maybe<T> extends Option<T> {
+
+        private final T input;
+
+        public Maybe(T input) {
+            this.input = input;
+        }
+
+        @Override
+        public boolean isDefined() {
+            return !(input == null);
+        }
+
+        @Override
+        public T get() {
+            return input;
+        }
+
+        @Override
+        public T getOrElse(T value) {
+            if (input == null) {
+                return value;
+            } else {
+                return input;
+            }
+        }
+
+        @Override
+        public Iterator<T> iterator() {
+            if (input == null) {
+                return Collections.<T>emptyList().iterator();
+            } else {
+                return Collections.singletonList(input).iterator();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Maybe ( " + input + " )";
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return !isDefined();
+        }
+
+        @Override
+        public Option<T> orElse(T value) {
+            if (isDefined()) {
+                return this;
+            } else {
+                return Option.some(value);
+            }
+        }
+    }
 
     public static class Any<T> extends Some<Object> {
 
@@ -199,74 +261,152 @@ public class F {
             return "Tuple ( _1: " + _1 + ", _2: " + _2 + " )";
         }
     }
+    
+    public static class Tuple3<A, B, C> {
 
-    /**
-     * A not so good version of some. Mostly used to wrap
-     * return of library methods.
-     *
-     * @param <T>
-     */
-    public static class Maybe<T> extends Option<T> {
+        final public A _1;
+        final public B _2;
+        final public C _3;
 
-        private final T input;
+        public Tuple3(A _1, B _2, C _3) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+        }
 
-        public Maybe(T input) {
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 + " )";
+        }
+    }
+    
+    public static class Tuple4<A, B, C, D> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+
+        public Tuple4(A _1, B _2, C _3, D _4) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 + ", _4: " + _4 + " )";
+        }
+    }
+    
+    public static class Tuple5<A, B, C, D, E> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+        final public E _5;
+
+        public Tuple5(A _1, B _2, C _3, D _4, E _5) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+            this._5 = _5;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 + ", _4: " + _4 + ", _5: " + _5 + " )";
+        }
+    }
+    
+    public static interface Functor<T, R> {
+        
+        Tuple<T, R> apply(Monad<T, ?> monad);
+    }
+    
+    public static interface Monad<T, R> {
+        
+        boolean isDefined();
+
+        boolean isEmpty();
+        
+        boolean isResultDefined();
+
+        boolean isResultEmpty();
+        
+        T get();
+        
+        Option<R> unit();
+                    
+        <A> Monad<A, Object> pure(A a);
+        
+        <V> Monad<T, V> bind(Functor<T, V> func);        
+    }
+    
+    public static class Monadic<T, R> implements Monad<T, R> {
+
+        private T input;
+        
+        private Option<R> unit;
+
+        public Monadic(T input, Option<R> unit) {
             this.input = input;
+            this.unit = unit;
         }
 
         @Override
         public boolean isDefined() {
             return !(input == null);
         }
+        
+        @Override
+        public boolean isResultDefined() {
+            return !(unit == null);
+        }
 
         @Override
         public T get() {
             return input;
         }
-
+        
         @Override
-        public T getOrElse(T value) {
-            if (input == null) {
-                return value;
-            } else {
-                return input;
-            }
-        }
-
-        @Override
-        public Iterator<T> iterator() {
-            if (input == null) {
-                return Collections.<T>emptyList().iterator();
-            } else {
-                return Collections.singletonList(input).iterator();
-            }
+        public Option<R> unit() {
+            return unit;
         }
 
         @Override
         public String toString() {
-            return "Maybe ( " + input + " )";
+            return "Monad ( " + input + " => " + unit + " )";
         }
 
         @Override
         public boolean isEmpty() {
             return !isDefined();
         }
+        
+        @Override
+        public boolean isResultEmpty() {
+            return !isResultDefined();
+        }
+        
+        @Override
+        public <A> Monad<A, Object> pure(A value) {
+            return Monadic.monad(value);
+        }
 
         @Override
-        public Option<T> orElse(T value) {
-            if (isDefined()) {
-                return this;
-            } else {
-                return Option.some(value);
-            }
+        public <V> Monad<T, V> bind(Functor<T, V> func) {
+            Tuple<T, V> tuple = func.apply(this);
+            T in = tuple._1;
+            Option<V> o = Option.maybe(tuple._2);
+            return new Monadic<T, V>(in, o);
         }
-    }
-
-    public static <A, B> Tuple<A, B> tuple(A a, B b) {
-        return new Tuple(a, b);
-    }
-
-    public static <A> Maybe<A> maybe(A a) {
-        return new Maybe(a);
+        
+        public static <T> Monad<T, Object> monad(T value) {
+            return new Monadic<T, Object>(value, Option.none());
+        } 
     }
 }
