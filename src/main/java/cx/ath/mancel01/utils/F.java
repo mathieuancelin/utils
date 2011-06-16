@@ -353,7 +353,7 @@ public class F {
         
         private Option<Object> error;
 
-        public Monadic(T input, Option<R> unit, Option<Object> error) {
+        private Monadic(T input, Option<R> unit, Option<Object> error) {
             this.input = input;
             this.unit = unit;
             this.error = error;
