@@ -731,7 +731,7 @@ public class UtilsTest implements Utils {
     private class SendFunction2 implements MFunction<BadSocket, Boolean> {
         
         private String text = "";
-        
+                
         public SendFunction2 text(String text) {
             this.text = text;
             return this;

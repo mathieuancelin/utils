@@ -13,18 +13,21 @@ import java.util.Iterator;
 public class F {
 
     final static None<Object> none = new None<Object>();
-
-    public static abstract class Option<T> implements Iterable<T> {
+    
+    public static interface Wrapper<T> extends Iterable<T> {
         
-        public abstract boolean isDefined();
+        boolean isDefined();
 
-        public abstract boolean isEmpty();
+        boolean isEmpty();
         
-        public abstract T get();
+        T get();
 
-        public abstract Option<T> orElse(T value);
+        Option<T> orElse(T value);
+        
+        T getOrElse(T value);
+    }
 
-        public abstract T getOrElse(T value);
+    public static abstract class Option<T> implements Wrapper<T> {
 
         public static <T> None<T> none() {
             return (None<T>) (Object) none;
@@ -183,7 +186,7 @@ public class F {
         }
     }
 
-    public static class Any<T> extends Some<Object> {
+    public static class Any<T> extends Some<T> {
 
         public Any(T value) {
             super(value);
@@ -296,7 +299,8 @@ public class F {
 
         @Override
         public String toString() {
-            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 + ", _4: " + _4 + " )";
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " 
+                    + _3 + ", _4: " + _4 + " )";
         }
     }
     
@@ -318,7 +322,8 @@ public class F {
 
         @Override
         public String toString() {
-            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 + ", _4: " + _4 + ", _5: " + _5 + " )";
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 
+                    + ", _4: " + _4 + ", _5: " + _5 + " )";
         }
     }
     
@@ -327,17 +332,7 @@ public class F {
         Tuple<T, R> apply(Monad<T, ?> monad);
     }
     
-    public static interface Monad<T, R> {
-        
-        boolean isDefined();
-
-        boolean isEmpty();
-        
-        T get();
-
-        Option<T> orElse(T value);
-
-        T getOrElse(T value);
+    public static interface Monad<T, R> extends Wrapper<T> {
         
         Option<R> unit();
         
@@ -381,7 +376,7 @@ public class F {
 
         @Override
         public String toString() {
-            return "Monad ( " + input + " => " + unit + " )";
+            return "Monad ( " + input + " => " + unit + " : " + error + " )";
         }
 
         @Override
