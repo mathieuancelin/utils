@@ -322,7 +322,7 @@ public class F {
         }
     }
     
-    public static interface Functor<T, R> {
+    public static interface MFunction<T, R> {
         
         Tuple<T, R> apply(Monad<T, ?> monad);
     }
@@ -340,10 +340,14 @@ public class F {
         T getOrElse(T value);
         
         Option<R> unit();
+        
+        Option<Object> error();
+        
+        void error(Object e);
                     
         <A> Monad<A, Object> pure(A a);
         
-        <V> Monad<T, V> bind(Functor<T, V> func);        
+        <V> Monad<T, V> bind(MFunction<T, V> func);        
     }
     
     public static class Monadic<T, R> extends Option<T> implements Monad<T, R> {
@@ -351,10 +355,13 @@ public class F {
         private T input;
         
         private Option<R> unit;
+        
+        private Option<Object> error;
 
-        public Monadic(T input, Option<R> unit) {
+        public Monadic(T input, Option<R> unit, Option<Object> error) {
             this.input = input;
             this.unit = unit;
+            this.error = error;
         }
 
         @Override
@@ -388,11 +395,21 @@ public class F {
         }
 
         @Override
-        public <V> Monad<T, V> bind(Functor<T, V> func) {
-            Tuple<T, V> tuple = func.apply(this);
-            T in = tuple._1;
-            Option<V> o = Option.maybe(tuple._2);
-            return new Monadic<T, V>(in, o);
+        public <V> Monad<T, V> bind(MFunction<T, V> func) {
+            try {
+                Tuple<T, V> tuple = func.apply(this);
+                T in = tuple._1;
+                Option<V> o = Option.maybe(tuple._2);
+                Option<Object> er = Option.none();
+                if (error.isDefined()) {
+                    er = Option.some(error.get());
+                }
+                return new Monadic<T, V>(in, o, er);
+            } catch (Exception e) {
+                Option<V> ret = Option.none();
+                error = (Option) Option.some(e);
+                return new Monadic<T, V>(input, ret, error);
+            }
         }
         
         @Override
@@ -423,22 +440,17 @@ public class F {
         }
                 
         public static <T> Monad<T, Object> monad(T value) {
-            return new Monadic<T, Object>(value, Option.none());
-        }
-    }
-    
-    public static class NoneMonad<T, R> extends Monadic<T, R> {
-
-        private final Option<Object> unit;
-        
-        public NoneMonad(T input, Option<R> ret, Option<Object> unit) {
-            super(input, ret);
-            this.unit = unit;
+            return new Monadic<T, Object>(value, Option.none(), Option.none());
         }
 
         @Override
-        public <V> Monad<T, V> bind(Functor<T, V> func) {
-            return new NoneMonad<T, V>(get(), (Option<V>) Option.none(), unit);
+        public Option<Object> error() {
+            return error;
+        }
+
+        @Override
+        public void error(Object e) {
+            error = Option.some(e);
         }
     }
 }

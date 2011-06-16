@@ -18,9 +18,10 @@ public class UtilsTest implements Utils {
     @Test
     public void testMonads() {
         String base = "Hello !";
+        
         Monad<String, Object> val = Monadic.monad(base);
         
-        Functor<String, String> t = new Functor<String, String>() {
+        MFunction<String, String> t = new MFunction<String, String>() {
 
             @Override
             public Tuple<String, String> apply(Monad<String, ?> monad) {
@@ -29,7 +30,7 @@ public class UtilsTest implements Utils {
             }
         };
         
-        Functor<String, String> t2 = new Functor<String, String>() {
+        MFunction<String, String> t2 = new MFunction<String, String>() {
 
             @Override
             public Tuple<String, String> apply(Monad<String, ?> monad) {
@@ -45,43 +46,57 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(ret2, base + base);
         Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
         
-        Functor<Socket, Boolean> connect = new Functor<Socket, Boolean>() {
+        MFunction<Socket, Boolean> connect = new MFunction<Socket, Boolean>() {
 
             @Override
             public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
-                Boolean result = monad.get().connect();
-                return new Tuple<Socket, Boolean>(monad.get(), result);
-            }
-        };
-        
-        Functor<Socket, Boolean> disconnect = new Functor<Socket, Boolean>() {
-
-            @Override
-            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
-                Boolean result = (Boolean) monad.unit().get();
-                if (result) {
-                    result = monad.get().disconnect();
+                Boolean result = false;
+                if (!monad.error().isDefined()) {
+                    result = monad.get().connect();
+                    if (!result)
+                        monad.error("Connection denied");
                 }
                 return new Tuple<Socket, Boolean>(monad.get(), result);
             }
         };
         
-        Functor<BadSocket, Boolean> connect2 = new Functor<BadSocket, Boolean>() {
+        MFunction<Socket, Boolean> disconnect = new MFunction<Socket, Boolean>() {
+
+            @Override
+            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+                Boolean result = false;
+                if (!monad.error().isDefined()) {
+                    result = monad.get().disconnect();
+                    if (!result)
+                        monad.error("Disconnection error");
+                }
+                return new Tuple<Socket, Boolean>(monad.get(), result);
+            }
+        };
+        
+        MFunction<BadSocket, Boolean> connect2 = new MFunction<BadSocket, Boolean>() {
 
             @Override
             public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
-                Boolean result = monad.get().connect();
+                Boolean result = false;
+                if (!monad.error().isDefined()) {
+                    result = monad.get().connect();
+                    if (!result)
+                        monad.error("Connection error");
+                }
                 return new Tuple<BadSocket, Boolean>(monad.get(), result);
             }
         };
         
-        Functor<BadSocket, Boolean> disconnect2 = new Functor<BadSocket, Boolean>() {
+        MFunction<BadSocket, Boolean> disconnect2 = new MFunction<BadSocket, Boolean>() {
 
             @Override
             public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
-                Boolean result = (Boolean) monad.unit().get();
-                if (result) {
-                    monad.get().disconnect();
+                Boolean result = false;
+                if (!monad.error().isDefined()) {
+                    result = monad.get().disconnect();
+                    if (!result)
+                        monad.error("Disconnection error");
                 }
                 return new Tuple<BadSocket, Boolean>(monad.get(), result);
             }
@@ -693,7 +708,7 @@ public class UtilsTest implements Utils {
         }
     }
     
-    private class SendFunction implements Functor<Socket, Boolean> {
+    private class SendFunction implements MFunction<Socket, Boolean> {
         
         private String text = "";
         
@@ -713,7 +728,7 @@ public class UtilsTest implements Utils {
         }
     }
     
-    private class SendFunction2 implements Functor<BadSocket, Boolean> {
+    private class SendFunction2 implements MFunction<BadSocket, Boolean> {
         
         private String text = "";
         
@@ -724,10 +739,11 @@ public class UtilsTest implements Utils {
 
         @Override
         public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
-            
-            Boolean result = (Boolean) monad.unit().get();
-            if (result) {
+            Boolean result = false;
+            if (!monad.error().isDefined()) {
                 result = monad.get().send(text);
+                if (!result)
+                    monad.error("Send error");
             }
             return new Tuple<UtilsTest.BadSocket, Boolean>(monad.get(), result);
         }
