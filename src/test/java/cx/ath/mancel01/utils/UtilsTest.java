@@ -94,6 +94,16 @@ public class UtilsTest implements Utils {
         
         socket.bind(connect).bind(send.text("Hello")).bind(disconnect);
         socket2.bind(connect2).bind(send2.text("Hello")).bind(disconnect2);
+        
+        Assert.assertTrue(socket.isDefined());
+        
+        Assert.assertTrue(socket.get().connectCalled);
+        Assert.assertTrue(socket.get().sendCalled);
+        Assert.assertTrue(socket.get().disconnectCalled);
+        
+        Assert.assertTrue(socket2.get().connectCalled);
+        Assert.assertFalse(socket2.get().sendCalled);
+        Assert.assertFalse(socket2.get().disconnectCalled);
     }
 
     @Test
@@ -636,17 +646,24 @@ public class UtilsTest implements Utils {
     
     private class Socket {
         
+        boolean connectCalled = false;
+        boolean sendCalled = false;
+        boolean disconnectCalled = false;
+        
         public Boolean connect() {
+            connectCalled = true;
             System.out.println("Connect socket ...");
             return true;
         }
         
         public Boolean send(String t) {
+            sendCalled = true;
             System.out.println("send " + t);
             return true;
         }
         
         public Boolean disconnect() {
+            disconnectCalled = true;
             System.out.println("Disconnect socket !");
             return true;
         }
@@ -656,18 +673,21 @@ public class UtilsTest implements Utils {
         
         @Override
         public Boolean connect() {
+            connectCalled = true;
             System.out.println("Connect bad socket ...");
             return false;
         }
         
         @Override
         public Boolean send(String t) {
+            sendCalled = true;
             System.out.println("bad send " + t);
             return false;
         }
         
         @Override
         public Boolean disconnect() {
+            disconnectCalled = true;
             System.out.println("Disconnect bad socket !");
             return false;
         }

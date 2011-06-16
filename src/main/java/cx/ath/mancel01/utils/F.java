@@ -333,11 +333,11 @@ public class F {
 
         boolean isEmpty();
         
-        boolean isResultDefined();
-
-        boolean isResultEmpty();
-        
         T get();
+
+        Option<T> orElse(T value);
+
+        T getOrElse(T value);
         
         Option<R> unit();
                     
@@ -346,7 +346,7 @@ public class F {
         <V> Monad<T, V> bind(Functor<T, V> func);        
     }
     
-    public static class Monadic<T, R> implements Monad<T, R> {
+    public static class Monadic<T, R> extends Option<T> implements Monad<T, R> {
 
         private T input;
         
@@ -360,11 +360,6 @@ public class F {
         @Override
         public boolean isDefined() {
             return !(input == null);
-        }
-        
-        @Override
-        public boolean isResultDefined() {
-            return !(unit == null);
         }
 
         @Override
@@ -386,12 +381,7 @@ public class F {
         public boolean isEmpty() {
             return !isDefined();
         }
-        
-        @Override
-        public boolean isResultEmpty() {
-            return !isResultDefined();
-        }
-        
+
         @Override
         public <A> Monad<A, Object> pure(A value) {
             return Monadic.monad(value);
@@ -405,9 +395,36 @@ public class F {
             return new Monadic<T, V>(in, o);
         }
         
+        @Override
+        public T getOrElse(T value) {
+            if (input == null) {
+                return value;
+            } else {
+                return input;
+            }
+        }
+
+        @Override
+        public Iterator<T> iterator() {
+            if (input == null) {
+                return Collections.<T>emptyList().iterator();
+            } else {
+                return Collections.singletonList(input).iterator();
+            }
+        }
+
+        @Override
+        public Option<T> orElse(T value) {
+            if (isDefined()) {
+                return this;
+            } else {
+                return Option.some(value);
+            }
+        }
+                
         public static <T> Monad<T, Object> monad(T value) {
             return new Monadic<T, Object>(value, Option.none());
-        } 
+        }
     }
     
     public static class NoneMonad<T, R> extends Monadic<T, R> {
