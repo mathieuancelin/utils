@@ -16,6 +16,11 @@ public class M {
             public <R> ExpectedMatch<T, R> andExpect(Class<R> returnType) {
                 return new ExpectedMatchImpl<T, R>(value);
             }
+
+            @Override
+            public Option<Object> with(ExecutableMatcher<T, Object>... matchers) {
+                return new ExpectedMatchImpl<T, Object>(value).with(matchers);
+            }
         };
     }
 
@@ -29,7 +34,7 @@ public class M {
         Option<R> apply(T value);
     }
 
-    public static interface UnexpectedMatch<T> {
+    public static interface UnexpectedMatch<T> extends ExpectedMatch<T, Object> {
 
         <R> ExpectedMatch<T, R> andExpect(Class<R> returnType);
     }
