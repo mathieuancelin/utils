@@ -141,12 +141,10 @@ public class ActorTest {
 
         @Override
         public void act() {
-            loop(new Function<Object>() {
+            loop(new Function<Post>() {
                 @Override
-                public void apply(Object t) {
-                    if (t instanceof Post) {
-                        System.out.println(user.name + " receive " + ((Post) t).msg);
-                    }
+                public void apply(Post post) {
+                    System.out.println(user.name + " receive " + post.msg);
                 }
             });
         }
