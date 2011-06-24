@@ -2,14 +2,34 @@ package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.C.Function;
 import cx.ath.mancel01.utils.F.Option;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class Actor extends Thread {
     
-    private static ExecutorService executor = Executors.newFixedThreadPool(4);
+    private static final BlockingQueue<Runnable> tasks = new ArrayBlockingQueue<Runnable>(500);
+        
+    private static ExecutorService executor2 = 
+            new ThreadPoolExecutor(4, 500, 30L, TimeUnit.SECONDS, tasks);
+    
+    private static ExecutorService executor = Executors.newCachedThreadPool();
+    
+    static {
+        Runtime.getRuntime().addShutdownHook(
+            new Thread() {
+                @Override
+                public void run() {
+                    executor.shutdownNow();
+                }
+            }
+        );
+    }
     
     private static class Message {
         Object payload;
@@ -38,6 +58,10 @@ public abstract class Actor extends Thread {
     
     public abstract void act();
     
+    public final Actor me() {
+        return this;
+    }
+    
     public final void loop(Function react) {
         this.react = react;
         while(started.get()) {
@@ -46,11 +70,6 @@ public abstract class Actor extends Thread {
                 sender = ret.sender;
                 react.apply(ret.payload);
                 sender = Option.none();
-            }
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
             }
         }
     }
@@ -85,4 +104,6 @@ public abstract class Actor extends Thread {
         executor.submit(this);
         return this;
     }
+    
+    public static class PoisonPill {}
 }

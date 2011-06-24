@@ -11,16 +11,15 @@ public class ActorTest {
     
     private static CountDownLatch down = new CountDownLatch(20);
     
+    private static CountDownLatch userlatch = new CountDownLatch(12);
+    
     @Test
     public void testChatRoom() throws Exception {
         User user1 = new User("maurice");
         User user2 = new User("john");
         User user3 = new User("pete");
-        
         ChatRoom room = new ChatRoom();
-        
         room.startActor();
-        
         room.send(new Suscribe(user1));
         room.send(new Suscribe(user2));
         room.send(new Suscribe(user3));
@@ -33,11 +32,14 @@ public class ActorTest {
         Thread.sleep(200);
         room.send(new Unsuscribe(user1));
         room.send(new Unsuscribe(user2));
-        room.send(new Unsuscribe(user3));        
+        room.send(new Unsuscribe(user3)); 
+        userlatch.await();
+        room.stopSession();
+        room.stopActor();
     }
     
     @Test
-    public void testPingPong() {
+    public void testPingPong() throws Exception {
         Pong pong = new Pong();
         Ping ping = new Ping(pong);
         pong.startActor();
@@ -50,10 +52,6 @@ public class ActorTest {
 
         public Ping(Actor pongActor) {
             this.pongActor = pongActor;
-        }
-        
-        private final Actor me() {
-            return this;
         }
 
         @Override
@@ -112,10 +110,12 @@ public class ActorTest {
                 public void apply(Object msg) {
                     for (Suscribe value : with(caseClassOf(Suscribe.class)).match(msg)) {
                         System.out.println(value.user.name + " suscribed ....");
+                        userlatch.countDown();
                         session.put(value.getUser(), new UserActor(value.getUser()).startActor());
                     }
                     for (Unsuscribe value : with(caseClassOf(Unsuscribe.class)).match(msg)) {
                         System.out.println(value.user.name + " unsuscribed ....");
+                        userlatch.countDown();
                         session.get(value.getUser()).stopActor();
                         session.remove(value.getUser());
                     }
@@ -128,6 +128,12 @@ public class ActorTest {
                     }
                 }
             });
+        }
+        
+        public void stopSession() {
+            for (Actor actor : session.values()) {
+                actor.stopActor();
+            }
         }
     }
     
@@ -145,6 +151,7 @@ public class ActorTest {
                 @Override
                 public void apply(Post post) {
                     System.out.println(user.name + " receive " + post.msg);
+                    userlatch.countDown();
                 }
             });
         }
