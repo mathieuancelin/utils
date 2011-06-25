@@ -14,23 +14,37 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Actors {
     
-    private static final ConcurrentHashMap<String, Actor> actors = 
-            new ConcurrentHashMap<String, Actor>();
+    private static final ConcurrentHashMap<String, ActorRef> actors = 
+            new ConcurrentHashMap<String, ActorRef>();
     
-    private static Actor getActor(String name) {
+    private static ActorRef getActor(String name) {
         // here manage remote and local actors
         return actors.get(name);
     }
     
-    private static void register(String name, Actor actor) {
+    private static void register(String name, ActorRef actor) {
+        // here manage remote and local actors
         actors.putIfAbsent(name, actor);
     }
     
     private static void unregister(String name) {
+        // here manage remote and local actors
         actors.remove(name);
     }
+    
+    public static interface ActorRef {
 
-    public static abstract class Actor extends Thread implements DirectSendable {
+        void send(Object msg);
+
+        void send(Object msg, String from);
+    }
+
+    public static interface LocalActorRef extends ActorRef {
+
+        void send(Object msg, ActorRef from);
+    }
+
+    public static abstract class Actor extends Thread implements LocalActorRef {
 
         private static final BlockingQueue<Runnable> tasks = new ArrayBlockingQueue<Runnable>(500);
         
@@ -53,18 +67,24 @@ public class Actors {
         private static class Message {
 
             Object payload;
-            Option<Actor> sender;
+            
+            Option<ActorRef> sender;
 
-            public Message(Object payload, Option<Actor> sender) {
+            public Message(Object payload, Option<ActorRef> sender) {
                 this.payload = payload;
                 this.sender = sender;
             }
         }
-        private ConcurrentLinkedQueue<Message> mailbox = new ConcurrentLinkedQueue<Message>();
+        private ConcurrentLinkedQueue<Message> mailbox = 
+                new ConcurrentLinkedQueue<Message>();
+        
         private Function<Object> react;
+        
         private AtomicBoolean started = new AtomicBoolean(false);
+        
         private AtomicBoolean buzy = new AtomicBoolean(false);
-        protected Option<Actor> sender = Option.none();
+        
+        protected Option<ActorRef> sender = Option.none();
 
         protected void before() {}
     
@@ -128,13 +148,13 @@ public class Actors {
 
         @Override
         public final void send(Object msg) {
-            Option<Actor> opt = Option.none();
+            Option<ActorRef> opt = Option.none();
             mailbox.add(new Message(msg, opt));
         }
 
         @Override
-        public final void send(Object msg, Actor from) {
-            Option<Actor> opt = Option.maybe(from);
+        public final void send(Object msg, ActorRef from) {
+            Option<ActorRef> opt = Option.maybe(from);
             mailbox.add(new Message(msg, opt));
         }
         
@@ -155,21 +175,10 @@ public class Actors {
         }
     }
 
-    public static interface Sendable {
-
-        void send(Object msg);
-
-        void send(Object msg, String from);
-    }
-
-    public static interface DirectSendable extends Sendable {
-
-        void send(Object msg, Actor from);
-    }
-
     public static class LoadBalancer {
 
         private final List<Actor> actors;
+        
         private Iterator<Actor> it;
 
         public LoadBalancer(List<Actor> actors) {
@@ -241,7 +250,7 @@ public class Actors {
             Actors.unregister(name);
         }
 
-        public static Option<Actor> forName(String name) {
+        public static Option<ActorRef> forName(String name) {
             return Option.maybe(Actors.getActor(name));
         }
     }
@@ -261,11 +270,11 @@ public class Actors {
             this.from = Option.none();
         }
 
-        public Option<Actor> getFrom() {
+        public Option<Actor> from() {
             return from;
         }
 
-        public Object getMessage() {
+        public Object message() {
             return message;
         }
     }
