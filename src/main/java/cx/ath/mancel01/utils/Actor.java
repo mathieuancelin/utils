@@ -45,6 +45,8 @@ public abstract class Actor extends Thread {
     
     private AtomicBoolean started = new AtomicBoolean(false);
     
+    private AtomicBoolean buzy = new AtomicBoolean(false);
+    
     protected Option<Actor> sender = Option.none();
     
     protected void before() {};
@@ -76,7 +78,9 @@ public abstract class Actor extends Thread {
                     stopActor();
                 } else {
                     sender = ret.sender;
+                    buzy.compareAndSet(false, true);
                     react.apply(ret.payload);
+                    buzy.compareAndSet(true, false);
                     sender = Option.none();
                 }
             } else {
@@ -97,7 +101,9 @@ public abstract class Actor extends Thread {
                 stopActor();
             } else {
                 sender = ret.sender;
+                buzy.compareAndSet(false, true);
                 react.apply(ret.payload);
+                buzy.compareAndSet(true, false);
                 sender = Option.none();
             }
         }
@@ -127,7 +133,7 @@ public abstract class Actor extends Thread {
     public static class LoadBalancer {
         
         private final List<Actor> actors;
-        // TODO : need a better heuristic for real load balancing
+
         private Iterator<Actor> it;
 
         public LoadBalancer(List<Actor> actors) {
@@ -140,10 +146,7 @@ public abstract class Actor extends Thread {
                 Broadcast b = (Broadcast) msg;
                 broadcast(b.message, b.from.getOrElse(null));
             } else {
-                if (!it.hasNext()) {
-                    it = actors.iterator();
-                }
-                it.next().send(msg);
+                chooseAndSend(msg, null);
             }
         }
 
@@ -152,20 +155,34 @@ public abstract class Actor extends Thread {
                 Broadcast b = (Broadcast) msg;
                 broadcast(b.message, b.from.getOrElse(from));
             } else {
-                if (!it.hasNext()) {
-                    it = actors.iterator();
+                chooseAndSend(msg, from);
+            }
+        }
+        
+        private void chooseAndSend(Object msg, Actor from) {
+            if (!it.hasNext()) {
+                it = actors.iterator();
+            }
+            Actor a = it.next();
+            if (!a.buzy.get()) {
+               a.send(msg, from);
+            } else {
+                boolean sent = false;
+                for (Actor bis : actors) {
+                    if (!bis.buzy.get()) {
+                        a.send(msg, from);
+                        sent = true;
+                    }
                 }
-                it.next().send(msg, from);
+                if (!sent) {
+                    a.send(msg, from);
+                }
             }
         }
         
         private void broadcast(Object message, Actor from) {
             for (Actor actor : actors) {
-                if (from == null) {
-                   actor.send(message);
-                } else {
-                   actor.send(message, from);
-                }
+               actor.send(message, from);
             }
         }
     }
