@@ -29,6 +29,7 @@ import javax.tools.ToolProvider;
 
 /**
  * Attempt to support some kind of curryfication for Java.
+ * Very useful for partial method application.
  *
  * @author Mathieu ANCELIN
  */

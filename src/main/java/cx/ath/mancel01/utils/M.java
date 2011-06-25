@@ -3,7 +3,7 @@ package cx.ath.mancel01.utils;
 import cx.ath.mancel01.utils.F.Option;
 
 /**
- * Pattern matching for Java.
+ * Pattern matching for Java (with more or less verbose).
  *
  * @author Mathieu ANCELIN
  */
