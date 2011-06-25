@@ -22,8 +22,7 @@ public class PiActorTest {
 
     public static class Pi {
 
-        public static class Calculate {
-        }
+        public static class Calculate {}
 
         public static class Work {
 
@@ -124,7 +123,7 @@ public class PiActorTest {
                             for (int start = 0; start < nrOfMessages; start++) {
                                 router.send(new Work(start, nrOfElements), me());
                             }
-                            router.send(new Broadcast(new PoisonPill(), Option.some(me())));
+                            router.send(new Broadcast(new PoisonPill()));
                         }
                         for (Result result : with(caseClassOf(Result.class)).match(t)) {
                             pi += result.getValue();
