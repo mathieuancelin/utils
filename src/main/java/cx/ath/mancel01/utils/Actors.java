@@ -4,6 +4,7 @@ import cx.ath.mancel01.utils.C.Function;
 import cx.ath.mancel01.utils.F.Option;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +13,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Small Actors library for multi-threaded programming models.
+ * 
+ * @author Mathieu ANCELIN
+ */
 public class Actors {
     
     private static final ConcurrentHashMap<String, ActorRef> actors = 
@@ -32,6 +38,14 @@ public class Actors {
         actors.remove(name);
     }
     
+    public static Option<ActorRef> forName(String name) {
+        return Option.maybe(Actors.getActor(name));
+    }
+    
+    public static void shutdownAll() {
+        Actor.executor.shutdownNow();
+    }
+    
     public static interface ActorRef {
 
         void send(Object msg);
@@ -49,8 +63,6 @@ public class Actors {
         private static final BlockingQueue<Runnable> tasks = new ArrayBlockingQueue<Runnable>(500);
         
         private static ExecutorService executor = Executors.newCachedThreadPool();
-//            new ThreadPoolExecutor(0, Integer.MAX_VALUE,
-//                      60L, TimeUnit.SECONDS, tasks);
 
         static {
             Runtime.getRuntime().addShutdownHook(
@@ -85,6 +97,17 @@ public class Actors {
         private AtomicBoolean buzy = new AtomicBoolean(false);
         
         protected Option<ActorRef> sender = Option.none();
+        
+        protected final String uuid;
+
+        public Actor() {
+            uuid = UUID.randomUUID().toString();
+            Actors.register(uuid, this);
+        }
+        
+        public void unregister() {
+            Actors.unregister(uuid);
+        }
 
         protected void before() {}
     
@@ -106,6 +129,12 @@ public class Actors {
             return this;
         }
 
+        /**
+         * Method to loop the reception function to read all messages
+         * in the mailbox one by one. 
+         * Once launch, the loop will end with the stopActor method
+         * or with a poison pill.
+         */
         public final void loop(Function react) {
             this.react = react;
             while (started.get()) {
@@ -130,6 +159,9 @@ public class Actors {
             }
         }
 
+        /**
+         * Read only one message in the mailbox with the function.
+         */
         public final void react(Function<Object> react) {
             this.react = react;
             Message ret = mailbox.poll();
@@ -231,6 +263,27 @@ public class Actors {
             }
         }
     }
+    
+    public static class Broadcaster {
+
+        private final List<Actor> actors;
+        
+        public Broadcaster(List<Actor> actors) {
+            this.actors = actors;
+        }
+
+        public final void send(Object msg) {
+            for (Actor actor : actors) {
+                actor.send(msg);
+            }
+        }
+
+        public final void send(Object msg, Actor from) {
+            for (Actor actor : actors) {
+                actor.send(msg, from);
+            }
+        }
+    }
 
     public static abstract class NamedActor extends Actor {
 
@@ -239,6 +292,7 @@ public class Actors {
         public NamedActor(String name) {
             super();
             this.name = name;
+            Actors.unregister(uuid);
             Actors.register(name, this);
         }
 
@@ -246,12 +300,9 @@ public class Actors {
             return name;
         }
 
+        @Override
         public void unregister() {
             Actors.unregister(name);
-        }
-
-        public static Option<ActorRef> forName(String name) {
-            return Option.maybe(Actors.getActor(name));
         }
     }
 
@@ -280,4 +331,6 @@ public class Actors {
     }
 
     public static class PoisonPill {}
+    
+    public static class Kill {}
 }
