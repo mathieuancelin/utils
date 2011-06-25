@@ -44,6 +44,9 @@ public class ActorTest {
         Ping ping = new Ping(pong);
         pong.startActor();
         ping.startActor();
+        down.await();
+        pong.stopActor();
+        ping.stopActor();
     }
     
     public static class Ping extends Actor {

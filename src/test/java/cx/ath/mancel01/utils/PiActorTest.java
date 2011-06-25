@@ -1,6 +1,6 @@
 package cx.ath.mancel01.utils;
 
-import java.util.Iterator;
+import cx.ath.mancel01.utils.F.Option;
 import cx.ath.mancel01.utils.C.Function;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,9 +72,6 @@ public class PiActorTest {
                             double result = calculatePiFor(work.getStart(), work.getNrOfElements());
                             sender.get().send(new Result(result));
                         }
-                        for (PoisonPill p : with(caseClassOf(PoisonPill.class)).match(msg)) {
-                            me().stopActor();
-                        }
                     }
                 });
             }
@@ -89,6 +86,7 @@ public class PiActorTest {
             private int nrOfResults;
             private long start;
             private List<Actor> workers = new ArrayList<Actor>();
+            private LoadBalancer router;
 
             public Master(int nrOfWorkers, int nrOfMessages, int nrOfElements, CountDownLatch latch) {
                 this.nrOfMessages = nrOfMessages;
@@ -97,35 +95,38 @@ public class PiActorTest {
                 for (int i = 0; i < nrOfWorkers; i++) {
                     workers.add(new Worker().startActor());
                 }
+                router = new LoadBalancer(workers);
             }
-            
+
             @Override
-            public void act() {
+            protected void before() {
                 System.out.println("Starting master");
                 start = System.currentTimeMillis();
+            }
+
+            @Override
+            protected void after() {
+                System.out.println(String.format(
+                    "\n\tPi estimate: \t\t%s\n\tCalculation time: \t%s millis",
+                        pi, (System.currentTimeMillis() - start)));
+            }
+
+            @Override
+            public void act() {
                 loop(new Function() {
                     @Override
                     public void apply(Object t) {
                         for (Calculate c : with(caseClassOf(Calculate.class)).match(t)) {
-                            Iterator<Actor> it = workers.iterator();
                             for (int start = 0; start < nrOfMessages; start++) {
-                                if (!it.hasNext()) {
-                                    it = workers.iterator();
-                                }
-                                it.next().send(new Work(start, nrOfElements), me());
+                                router.send(new Work(start, nrOfElements), me());
                             }
-                            for (Actor actor : workers) {
-                                actor.send(new PoisonPill(), me());
-                            }                            
+                            router.send(new Broadcast(new PoisonPill(), Option.some(me())));
                         }
                         for (Result result : with(caseClassOf(Result.class)).match(t)) {
                             pi += result.getValue();
                             nrOfResults += 1;
                             if (nrOfResults == nrOfMessages) {
                                 me().stopActor();
-                                System.out.println(String.format(
-                                    "\n\tPi estimate: \t\t%s\n\tCalculation time: \t%s millis",
-                                        pi, (System.currentTimeMillis() - start)));
                                 latch.countDown();
                             }
                         }
