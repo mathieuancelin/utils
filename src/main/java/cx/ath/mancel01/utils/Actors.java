@@ -5,16 +5,19 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import cx.ath.mancel01.utils.C.Function;
 import cx.ath.mancel01.utils.F.Option;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
-import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.List;
@@ -390,6 +393,7 @@ public class Actors {
         ois.close();
         return o;
     }
+    
     private static String toString(Object o) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -428,17 +432,22 @@ public class Actors {
                     throw new RuntimeException("can't send anything than string");
                 }
                 String data = URLEncoder.encode("remote-name", "UTF-8") + "=" + URLEncoder.encode(name, "UTF-8");
-                data += "&" + URLEncoder.encode("remote-msg", "UTF-8") + "=" + URLEncoder.encode(Actors.toString(msg), "UTF-8");
+                data += "&" + URLEncoder.encode("remote-msg", "UTF-8") + "=" + URLEncoder.encode((String) msg, "UTF-8");
                 data += "&" + URLEncoder.encode("remote-from", "UTF-8") + "=" + URLEncoder.encode(from, "UTF-8");
                 data += "&" + URLEncoder.encode("remote-host", "UTF-8") + "=" + URLEncoder.encode(remotingServer.getAddress().getHostName(), "UTF-8");
                 data += "&" + URLEncoder.encode("remote-port", "UTF-8") + "=" + URLEncoder.encode(remotingServer.getAddress().getPort() + "", "UTF-8");                            
-                URL url = new URL("http://" + host + ":" + port + "/");
-                URLConnection conn = url.openConnection();
+                URL url = new URL("http://" + host + ":" + port + "/");//?" + data);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection(); 
                 conn.setDoOutput(true);
                 OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
                 wr.write(data);
                 wr.flush();
-                conn.connect();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(
+                        conn.getInputStream()));
+                String decodedString;
+                while ((decodedString = in.readLine()) != null) {}
+                in.close();
                 wr.close();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -449,9 +458,7 @@ public class Actors {
     private static HttpHandler handler = new HttpHandler() {
         @Override
         public void handle(HttpExchange he) throws IOException {
-            System.out.println("req ...");
             String body = slurpBody(he.getRequestBody());
-            System.out.println(body);
             String[] params = body.split("&");
             String remoteName = "";
             String remoteFrom = "";
@@ -472,24 +479,29 @@ public class Actors {
                     remotePort = param.replace("remote-port=", "");
                 }
                 if (param.startsWith("remote-msg")) {
-                    remoteMsg = param.replace("remote-msg=", "");
+                    remoteMsg = URLDecoder.decode(param.replace("remote-msg=", ""), "UTF-8");
                 }
             }
+            String from = "remote://" + remoteHost
+                            + ":" + remotePort
+                            + "/" + remoteFrom;
             Option<ActorRef> ref = forName(remoteName);
             if (ref.isDefined()) {
                 try {
-                    ref.get().send(fromString(remoteMsg), 
+                    ref.get().send(remoteMsg, 
                             "remote://" + remoteHost
                             + ":" + remotePort
                             + "/" + remoteFrom);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
+            } else {
+                System.out.println(remoteName + " actor isn't defined");
             }
-            he.sendResponseHeaders(200, 0);
-            he.getResponseBody().flush();
+            byte[] response = "".getBytes();
+            he.sendResponseHeaders(HttpURLConnection.HTTP_OK, response.length);
+            he.getResponseBody().write(response);
             he.close();
-            System.out.println("end req");
         }
 
         private String slurpBody(InputStream body) {
