@@ -431,12 +431,17 @@ public class Actors {
                 if (!msg.getClass().equals(String.class)) {
                     throw new RuntimeException("can't send anything than string");
                 }
-                String data = URLEncoder.encode("remote-name", "UTF-8") + "=" + URLEncoder.encode(name, "UTF-8");
-                data += "&" + URLEncoder.encode("remote-msg", "UTF-8") + "=" + URLEncoder.encode((String) msg, "UTF-8");
-                data += "&" + URLEncoder.encode("remote-from", "UTF-8") + "=" + URLEncoder.encode(from, "UTF-8");
-                data += "&" + URLEncoder.encode("remote-host", "UTF-8") + "=" + URLEncoder.encode(remotingServer.getAddress().getHostName(), "UTF-8");
-                data += "&" + URLEncoder.encode("remote-port", "UTF-8") + "=" + URLEncoder.encode(remotingServer.getAddress().getPort() + "", "UTF-8");                            
-                URL url = new URL("http://" + host + ":" + port + "/");//?" + data);
+                String data = URLEncoder.encode("remote-name", "UTF-8") 
+                        + "=" + URLEncoder.encode(name, "UTF-8");
+                data += "&" + URLEncoder.encode("remote-msg", "UTF-8") 
+                        + "=" + URLEncoder.encode((String) msg, "UTF-8");
+                data += "&" + URLEncoder.encode("remote-from", "UTF-8") 
+                        + "=" + URLEncoder.encode(from, "UTF-8");
+                data += "&" + URLEncoder.encode("remote-host", "UTF-8") 
+                        + "=" + URLEncoder.encode(remotingServer.getAddress().getHostName(), "UTF-8");
+                data += "&" + URLEncoder.encode("remote-port", "UTF-8") 
+                        + "=" + URLEncoder.encode(remotingServer.getAddress().getPort() + "", "UTF-8");                            
+                URL url = new URL("http://" + host + ":" + port + "/");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection(); 
                 conn.setDoOutput(true);
                 OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
@@ -488,10 +493,7 @@ public class Actors {
             Option<ActorRef> ref = forName(remoteName);
             if (ref.isDefined()) {
                 try {
-                    ref.get().send(remoteMsg, 
-                            "remote://" + remoteHost
-                            + ":" + remotePort
-                            + "/" + remoteFrom);
+                    ref.get().send(remoteMsg, from);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
