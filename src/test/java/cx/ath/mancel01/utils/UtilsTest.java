@@ -16,12 +16,24 @@ import static cx.ath.mancel01.utils.Y.*;
 public class UtilsTest implements Utils {
     
     @Test
+    public void testSimpleCurry() {        
+        F2<String, String, String> naming = new F2<String, String, String>() {
+            @Override
+            public String apply(String name, String surname) {
+                return name + " : " + surname;
+            }
+        };
+        String named = F.curry(naming)._("Mathieu")._("Ancelin").invoke();
+        Assert.assertEquals(named, "Mathieu : Ancelin");
+    }
+    
+    @Test
     public void testMonads() {
         String base = "Hello !";
         
         Monad<String, Object> val = Monadic.monad(base);
         
-        MFunction<String, String> t = new MFunction<String, String>() {
+        MRFunction<String, String> t = new MRFunction<String, String>() {
 
             @Override
             public Tuple<String, String> apply(Monad<String, ?> monad) {
@@ -30,7 +42,7 @@ public class UtilsTest implements Utils {
             }
         };
         
-        MFunction<String, String> t2 = new MFunction<String, String>() {
+        MRFunction<String, String> t2 = new MRFunction<String, String>() {
 
             @Override
             public Tuple<String, String> apply(Monad<String, ?> monad) {
@@ -46,7 +58,7 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(ret2, base + base);
         Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
         
-        MFunction<Socket, Boolean> connect = new MFunction<Socket, Boolean>() {
+        MRFunction<Socket, Boolean> connect = new MRFunction<Socket, Boolean>() {
 
             @Override
             public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
@@ -54,13 +66,13 @@ public class UtilsTest implements Utils {
                 if (!monad.error().isDefined()) {
                     result = monad.get().connect();
                     if (!result)
-                        monad.error("Connection denied");
+                        monad.error("Connection  denied");
                 }
                 return new Tuple<Socket, Boolean>(monad.get(), result);
             }
         };
         
-        MFunction<Socket, Boolean> disconnect = new MFunction<Socket, Boolean>() {
+        MRFunction<Socket, Boolean> disconnect = new MRFunction<Socket, Boolean>() {
 
             @Override
             public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
@@ -74,7 +86,7 @@ public class UtilsTest implements Utils {
             }
         };
         
-        MFunction<BadSocket, Boolean> connect2 = new MFunction<BadSocket, Boolean>() {
+        MRFunction<BadSocket, Boolean> connect2 = new MRFunction<BadSocket, Boolean>() {
 
             @Override
             public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
@@ -88,7 +100,7 @@ public class UtilsTest implements Utils {
             }
         };
         
-        MFunction<BadSocket, Boolean> disconnect2 = new MFunction<BadSocket, Boolean>() {
+        MRFunction<BadSocket, Boolean> disconnect2 = new MRFunction<BadSocket, Boolean>() {
 
             @Override
             public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
@@ -126,13 +138,13 @@ public class UtilsTest implements Utils {
         Collection<String> values = Arrays.asList(new String[]{"Hello", "dude", ",", "how", "are", "you", "today", "!"});
         Collection<String> expected = Arrays.asList(new String[]{"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
         Collection<String> result =
-                forEach(values).apply(new Transformation<String, String>() {
+            forEach(values).apply(new Function<String, String>() {
 
-            @Override
-            public String apply(String t) {
-                return t.toUpperCase();
-            }
-        }).get();
+                @Override
+                public String apply(String t) {
+                    return t.toUpperCase();
+                }
+            }).get();
         Assert.assertEquals(expected, result);
     }
 
@@ -141,13 +153,13 @@ public class UtilsTest implements Utils {
         Collection<String> values = Arrays.asList(new String[]{"Hello", "dude", ",", "how", "are", "you", "today", "!"});
         Collection<String> expected = Arrays.asList(new String[]{"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
         Collection<String> result =
-                forEach(values).parApply(new Transformation<String, String>() {
+            forEach(values).parApply(new Function<String, String>() {
 
-            @Override
-            public String apply(String t) {
-                return t.toUpperCase();
-            }
-        }).get();
+                @Override
+                public String apply(String t) {
+                    return t.toUpperCase();
+                }
+            }).get();
         Assert.assertEquals(expected, result);
     }
 
@@ -158,7 +170,7 @@ public class UtilsTest implements Utils {
         long total = 0;
         for (int i = 0; i < 10; i++) {
             long start = System.currentTimeMillis();
-            forEach(values).apply(new Transformation<String, String>() {
+            forEach(values).apply(new Function<String, String>() {
 
                 @Override
                 public String apply(String t) {
@@ -172,7 +184,7 @@ public class UtilsTest implements Utils {
         total = 0;
         for (int i = 0; i < 10; i++) {
             long start = System.currentTimeMillis();
-            forEach(values).parApply(new Transformation<String, String>() {
+            forEach(values).parApply(new Function<String, String>() {
 
                 @Override
                 public String apply(String t) {
@@ -191,7 +203,7 @@ public class UtilsTest implements Utils {
         for (int i = 0; i < 100; i++) {
             values.add(i);
         }
-        Function<Integer> show = new Function<Integer>() {
+        Action<Integer> show = new Action<Integer>() {
 
             @Override
             public void apply(Integer t) {
@@ -222,7 +234,7 @@ public class UtilsTest implements Utils {
         String expected3 = "before => HELLO | DUDE | ! <= after";
         String join1 = join(values).with(" | ");
         Assert.assertEquals(expected1, join1);
-        String join2 = join(values).labelized(new Transformation<String, String>() {
+        String join2 = join(values).labelized(new Function<String, String>() {
 
             @Override
             public String apply(String t) {
@@ -230,7 +242,7 @@ public class UtilsTest implements Utils {
             }
         }).with(" | ");
         Assert.assertEquals(expected2, join2);
-        String join3 = join(values).labelized(new Transformation<String, String>() {
+        String join3 = join(values).labelized(new Function<String, String>() {
 
             @Override
             public String apply(String t) {
@@ -245,7 +257,7 @@ public class UtilsTest implements Utils {
         Collection<Person> values = Arrays.asList(new Person[]{new Person("John", "Doe"), new Person("John", "Adams")});
         Collection<String> expected = Arrays.asList(new String[]{"John", "John"});
         String expected1 = "John | John";
-        Collection<String> transformed = forEach(values).apply(new Transformation<Person, String>() {
+        Collection<String> transformed = forEach(values).apply(new Function<Person, String>() {
 
             @Override
             public String apply(Person t) {
@@ -253,7 +265,7 @@ public class UtilsTest implements Utils {
             }
         }).get();
         Assert.assertEquals(expected, transformed);
-        String join1 = join(values).labelized(new Transformation<Person, String>() {
+        String join1 = join(values).labelized(new Function<Person, String>() {
 
             @Override
             public String apply(Person t) {
@@ -616,7 +628,7 @@ public class UtilsTest implements Utils {
         }
     }
 
-    private class Sum implements Function<Integer> {
+    private class Sum implements Action<Integer> {
 
         private int value = 0;
         private int items = 0;
@@ -708,7 +720,7 @@ public class UtilsTest implements Utils {
         }
     }
     
-    private class SendFunction implements MFunction<Socket, Boolean> {
+    private class SendFunction implements MRFunction<Socket, Boolean> {
         
         private String text = "";
         
@@ -728,7 +740,7 @@ public class UtilsTest implements Utils {
         }
     }
     
-    private class SendFunction2 implements MFunction<BadSocket, Boolean> {
+    private class SendFunction2 implements MRFunction<BadSocket, Boolean> {
         
         private String text = "";
                 

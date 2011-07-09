@@ -1,11 +1,10 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.F.Action;
 import cx.ath.mancel01.utils.Actors.Actor;
 import cx.ath.mancel01.utils.Actors.Broadcast;
 import cx.ath.mancel01.utils.Actors.LoadBalancer;
 import cx.ath.mancel01.utils.Actors.PoisonPill;
-import cx.ath.mancel01.utils.F.Option;
-import cx.ath.mancel01.utils.C.Function;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -68,7 +67,7 @@ public class PiActorTest {
 
             @Override
             public void act() {
-                loop(new Function<Object>() {
+                loop(new Action<Object>() {
                     @Override
                     public void apply(Object msg) {
                         for (Work work : with(caseClassOf(Work.class)).match(msg)) {
@@ -116,7 +115,7 @@ public class PiActorTest {
 
             @Override
             public void act() {
-                loop(new Function() {
+                loop(new Action() {
                     @Override
                     public void apply(Object t) {
                         for (Calculate c : with(caseClassOf(Calculate.class)).match(t)) {

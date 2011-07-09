@@ -1,8 +1,8 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.F.Action;
 import cx.ath.mancel01.utils.Actors.Actor;
 import cx.ath.mancel01.utils.Actors.ActorRef;
-import static cx.ath.mancel01.utils.C.*;
 import static cx.ath.mancel01.utils.M.*;
 
 public class Ping extends Actors.NamedActor {
@@ -24,7 +24,7 @@ public class Ping extends Actors.NamedActor {
         final ActorRef pongActor = Actors.remote("localhost", 8888).forName("pong");
         pongActor.send("ping", "ping");
         System.out.println("PING");
-        loop(new Function<String>() {
+        loop(new Action<String>() {
             @Override
             public void apply(String msg) {
                 for (String value : with(caseStartsWith("pong")).match(msg)) {

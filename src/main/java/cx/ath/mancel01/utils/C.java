@@ -1,5 +1,7 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.F.Action;
+import cx.ath.mancel01.utils.F.Function;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -219,18 +221,18 @@ public class C {
         @Override
         Each<T> parFilteredBy(Predicate<T> predicate);
 
-        Filterable<T> execute(Function<T> action);
+        Filterable<T> execute(Action<T> action);
 
-        <R> Filterable<R> apply(Transformation<T, R> transformation);
+        <R> Filterable<R> apply(Function<T, R> transformation);
 
-        Filterable<T> parExecute(Function<T> action);
+        Filterable<T> parExecute(Action<T> action);
 
-        <R> Filterable<R> parApply(Transformation<T, R> transformation);
+        <R> Filterable<R> parApply(Function<T, R> transformation);
     }
 
     public static interface Joiner {
 
-        <T> Joiner labelized(Transformation<T, String> tranformation);
+        <T> Joiner labelized(Function<T, String> tranformation);
 
         Joiner before(String before);
 
@@ -244,16 +246,6 @@ public class C {
     public static interface Predicate<T> {
 
         boolean apply(T t);
-    }
-
-    public static interface Function<T> {
-
-        void apply(T t);
-    }
-
-    public static interface Transformation<T, R> {
-
-        R apply(T t);
     }
 
     public static interface Filterable<T> {
@@ -270,7 +262,7 @@ public class C {
 
     }
 
-    private static class JoinerImpl implements Function, Joiner {
+    private static class JoinerImpl implements Action, Joiner {
 
         private String separator;
 
@@ -282,7 +274,7 @@ public class C {
 
         private String after;
 
-        private Transformation label = new Transformation<Object, String>() {
+        private Function label = new Function<Object, String>() {
 
             @Override
             public String apply(Object t) {
@@ -306,7 +298,7 @@ public class C {
             if (before != null) {
                 builder.append(before);
             }
-            forEach(value).execute((Function) this);
+            forEach(value).execute((Action) this);
             if (before != null) {
                 builder.append(after);
             }
@@ -321,7 +313,7 @@ public class C {
             if (before != null) {
                 builder.append(before);
             }
-            forEach(value).parExecute((Function) this);
+            forEach(value).parExecute((Action) this);
             if (before != null) {
                 builder.append(after);
             }
@@ -331,7 +323,7 @@ public class C {
         }
 
         @Override
-        public <R> Joiner labelized(Transformation<R, String> tranformation) {
+        public <R> Joiner labelized(Function<R, String> tranformation) {
             this.label = tranformation;
             return this;
         }
@@ -391,7 +383,7 @@ public class C {
         }
 
         @Override
-        public Filterable<T> execute(Function<T> action) {
+        public Filterable<T> execute(Action<T> action) {
             initWorkingCollection();
             for (T element : workingCollection) {
                 action.apply(element);
@@ -400,7 +392,7 @@ public class C {
         }
 
         @Override
-        public <R> Filterable<R> apply(Transformation<T, R> transformation) {
+        public <R> Filterable<R> apply(Function<T, R> transformation) {
             initWorkingCollection();
             Collection<R> tmp = new ArrayList<R>();
             for (T element : workingCollection) {
@@ -431,7 +423,7 @@ public class C {
         }
 
         @Override
-        public Filterable<T> parExecute(final Function<T> action) {
+        public Filterable<T> parExecute(final Action<T> action) {
             Collection<Future<Void>> bulkExecutions = new ArrayList<Future<Void>>();
             initWorkingCollection();
             Collection<Bound> bulkBounds = getBulkBounds();
@@ -452,7 +444,7 @@ public class C {
         }
 
         @Override
-        public <R> Filterable<R> parApply(final Transformation<T, R> transformation) {
+        public <R> Filterable<R> parApply(final Function<T, R> transformation) {
             Collection<R> tmp = new ArrayList<R>();
             Collection<Future<Collection<R>>> bulkExecutions = new ArrayList<Future<Collection<R>>>();
             initWorkingCollection();
@@ -542,11 +534,11 @@ public class C {
 
     private static class BulkExecution<T> implements Callable<Void> {
 
-        private final Function<T> action;
+        private final Action<T> action;
         private final List<T> collection;
         private final Bound bound;
 
-        public BulkExecution(Function<T> action, List<T> collection, Bound bound) {
+        public BulkExecution(Action<T> action, List<T> collection, Bound bound) {
             this.action = action;
             this.collection = collection;
             this.bound = bound;
@@ -563,11 +555,11 @@ public class C {
 
     private static class BulkTransformation<T, R> implements Callable<Collection<R>> {
 
-        private final Transformation<T, R> transfo;
+        private final Function<T, R> transfo;
         private final List<T> collection;
         private final Bound bound;
 
-        public BulkTransformation(Transformation<T, R> transfo, List<T> collection, Bound bound) {
+        public BulkTransformation(Function<T, R> transfo, List<T> collection, Bound bound) {
             this.transfo = transfo;
             this.collection = collection;
             this.bound = bound;

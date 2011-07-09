@@ -3,7 +3,8 @@ package cx.ath.mancel01.utils;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import cx.ath.mancel01.utils.C.Function;
+import cx.ath.mancel01.utils.F.Action;
+import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Option;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -135,7 +136,7 @@ public class Actors {
         }
         private ConcurrentLinkedQueue<Message> mailbox =
                 new ConcurrentLinkedQueue<Message>();
-        private Function<Object> react;
+        private Action<Object> react;
         private AtomicBoolean started = new AtomicBoolean(false);
         private AtomicBoolean buzy = new AtomicBoolean(false);
         protected Option<ActorRef> sender = Option.none();
@@ -178,7 +179,7 @@ public class Actors {
          * Once launch, the loop will end with the stopActor method
          * or with a poison pill.
          */
-        public final void loop(Function react) {
+        public final void loop(Action react) {
             this.react = react;
             while (started.get()) {
                 Message ret = mailbox.poll();
@@ -205,7 +206,7 @@ public class Actors {
         /**
          * Read only one message in the mailbox with the function.
          */
-        public final void react(Function<Object> react) {
+        public final void react(Action<Object> react) {
             this.react = react;
             Message ret = mailbox.poll();
             if (ret != null) {

@@ -1,6 +1,6 @@
 package cx.ath.mancel01.utils;
 
-import static cx.ath.mancel01.utils.C.*;
+import cx.ath.mancel01.utils.F.Action;
 import static cx.ath.mancel01.utils.M.*;
 
 public class Pong extends Actors.NamedActor {
@@ -17,7 +17,7 @@ public class Pong extends Actors.NamedActor {
     @Override
     public void act() {
         System.out.println("starting pong ...");
-        loop(new Function<String>() {
+        loop(new Action<String>() {
             @Override
             public void apply(String msg) {
                 for (String value : with(caseStartsWith("ping")).match(msg)) {

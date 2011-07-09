@@ -1,11 +1,11 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.F.Action;
 import cx.ath.mancel01.utils.Actors.Actor;
 import org.junit.Test;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
-import static cx.ath.mancel01.utils.C.*;
 import static cx.ath.mancel01.utils.M.*;
 
 public class ActorTest {
@@ -62,7 +62,7 @@ public class ActorTest {
         public void act() {
             pongActor.send("ping", this);
             System.out.println("PING");
-            loop(new Function<String>() {
+            loop(new Action<String>() {
                 @Override
                 public void apply(String msg) {
                     for (String value : with(caseStartsWith("pong")).match(msg)) {
@@ -84,7 +84,7 @@ public class ActorTest {
 
         @Override
         public void act() {
-            loop(new Function<String>() {
+            loop(new Action<String>() {
                 @Override
                 public void apply(String msg) {
                     for (String value : with(caseStartsWith("ping")).match(msg)) {
@@ -109,7 +109,7 @@ public class ActorTest {
 
         @Override
         public void act() {
-            loop( new Function<Object>() {
+            loop( new Action<Object>() {
                 @Override
                 public void apply(Object msg) {
                     for (Suscribe value : with(caseClassOf(Suscribe.class)).match(msg)) {
@@ -151,7 +151,7 @@ public class ActorTest {
 
         @Override
         public void act() {
-            loop(new Function<Post>() {
+            loop(new Action<Post>() {
                 @Override
                 public void apply(Post post) {
                     System.out.println(user.name + " receive " + post.msg);
