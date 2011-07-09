@@ -11,23 +11,68 @@ import java.util.Iterator;
  * @author Mathieu ANCELIN
  */
 public class F {
-
-    final static None<Object> none = new None<Object>();
     
-    public static interface Wrapper<T> extends Iterable<T> {
-        
-        boolean isDefined();
+    public static interface Action<T> {
 
-        boolean isEmpty();
-        
-        T get();
+        void apply(T t);
+    }
+    
+    public static interface CheckedAction<T> {
 
-        Option<T> orElse(T value);
-        
-        T getOrElse(T value);
+        void apply(T t) throws Throwable;
     }
 
-    public static abstract class Option<T> implements Wrapper<T> {
+    public static interface Function<T, R> {
+
+        R apply(T t);
+    }
+        
+    public static interface CheckedFunction<T, R> {
+
+        R apply(T t) throws Throwable;
+    }
+    
+    public static interface F2<A, B, R> {
+
+        R apply(A a, B b);
+    }
+    
+    public static interface F3<A, B, C, R> {
+
+        R apply(A a, B b, C c);
+    }
+    
+    public static interface F4<A, B, C, D, R> {
+
+        R apply(A a, B b, C c, D d);
+    }
+    
+    public static interface F5<A, B, C, D, E, R> {
+
+        R apply(A a, B b, C c, D d, E e);
+    }
+
+    final static None<Object> none = new None<Object>();
+
+    public static abstract class Option<T> implements Iterable<T> {
+        
+        public abstract boolean isDefined();
+
+        public abstract boolean isEmpty();
+        
+        public abstract T get();
+
+        public abstract Option<T> orElse(T value);
+        
+        public abstract T getOrElse(T value);
+        
+        public abstract <R> Option<R> map(Function<T, R> function);
+        
+        public abstract Option<T> map(Action<T> function);
+        
+        public abstract <R> Option<R> map(CheckedFunction<T, R> function);
+        
+        public abstract Option<T> map(CheckedAction<T> function);
 
         public static <T> None<T> none() {
             return (None<T>) (Object) none;
@@ -78,6 +123,26 @@ public class F {
         public Option<T> orElse(T value) {
             return Option.some(value);
         }
+
+        @Override
+        public <R> Option<R> map(Function<T, R> function) {
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(Action<T> function) {
+            return Option.none();
+        }
+        
+        @Override
+        public <R> Option<R> map(CheckedFunction<T, R> function) {
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(CheckedAction<T> function) {
+            return Option.none();
+        }
     }
 
     public static class Some<T> extends Option<T> {
@@ -121,6 +186,44 @@ public class F {
         @Override
         public Option<T> orElse(T value) {
             return this;
+        }
+
+        @Override
+        public <R> Option<R> map(Function<T, R> function) {
+            try {
+                return Option.maybe(function.apply(get()));
+            } catch (Throwable t) {
+                return Option.none();
+            }
+        }
+
+        @Override
+        public Option<T> map(Action<T> function) {
+            try {
+                function.apply(get());
+                return Option.maybe(get());
+            } catch (Throwable t) {
+                return Option.none();
+            }
+        }
+        
+        @Override
+        public <R> Option<R> map(CheckedFunction<T, R> function) {
+            try {
+                return Option.maybe(function.apply(get()));
+            } catch (Throwable t) {
+                return Option.none();
+            }
+        }
+
+        @Override
+        public Option<T> map(CheckedAction<T> function) {
+            try {
+                function.apply(get());
+                return Option.maybe(get());
+            } catch (Throwable t) {
+                return Option.none();
+            }
         }
     }
     
@@ -184,6 +287,56 @@ public class F {
                 return Option.some(value);
             }
         }
+ 
+        @Override
+        public <R> Option<R> map(Function<T, R> function) {
+            if (isDefined()) {
+                try {
+                    return Option.maybe(function.apply(get()));
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(Action<T> function) {
+            if (isDefined()) {
+                try {
+                    function.apply(get());
+                    return Option.maybe(get());
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+        
+        @Override
+        public <R> Option<R> map(CheckedFunction<T, R> function) {
+            if (isDefined()) {
+                try {
+                    return Option.maybe(function.apply(get()));
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(CheckedAction<T> function) {
+            if (isDefined()) {
+                try {
+                    function.apply(get());
+                    return Option.maybe(get());
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
     }
 
     public static class Any<T> extends Some<T> {
@@ -204,7 +357,7 @@ public class F {
             if (isTyped(type)) {
                 return Option.some(type.cast(value));
             } else {
-                return (Option<A>) F.none;
+                return Option.none();
             }
         }
     }
@@ -220,11 +373,11 @@ public class F {
         }
 
         public static <A, B> Either<A, B> left(A value) {
-            return new Either(Option.some(value), none);
+            return new Either(Option.some(value), Option.none());
         }
 
         public static <A, B> Either<A, B> right(B value) {
-            return new Either(none, Option.some(value));
+            return new Either(Option.none(), Option.some(value));
         }
 
         public boolean isLeft() {
@@ -327,22 +480,166 @@ public class F {
         }
     }
     
-    public static interface MFunction<T, R> {
-        
-        Tuple<T, R> apply(Monad<T, ?> monad);
+    public static interface CF<C, R> {
+
+        R _(C arg);
     }
     
-    public static interface Monad<T, R> extends Wrapper<T> {
+    public static interface CCF<R> {
+        
+        R invoke();
+    }
+    
+    public static <A, B, R> CF<A, CF<B, CCF<R>>> curry(final F2<A, B, R> function) {
+        return new CF<A, CF<B, CCF<R>>>() {
+            @Override
+            public CF<B, CCF<R>> _(final A a) {
+                return new CF<B, CCF<R>>() {
+                    @Override
+                    public CCF<R> _(final B b) {
+                        return new CCF<R>() {
+                            @Override
+                            public R invoke() {
+                                return function.apply(a, b);
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static <A, B, C, R> CF<A, CF<B, CF<C, CCF<R>>>> curry(final F3<A, B, C, R> function) {
+        return new CF<A, CF<B, CF<C, CCF<R>>>>() {
+            @Override
+            public CF<B, CF<C, CCF<R>>> _(final A a) {
+                return new CF<B, CF<C, CCF<R>>>() {
+                    @Override
+                    public CF<C, CCF<R>> _(final B b) {
+                        return new CF<C, CCF<R>>() {
+                            @Override
+                            public CCF<R> _(final C c) {
+                                return new CCF<R>() {
+                                    @Override
+                                    public R invoke() {
+                                        return function.apply(a, b, c);
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static <A, B, C, D, R> CF<A, CF<B, CF<C, CF<D, CCF<R>>>>> curry(final F4<A, B, C, D, R> function) {
+        return new CF<A, CF<B, CF<C, CF<D, CCF<R>>>>>() {
+            @Override
+            public CF<B, CF<C, CF<D, CCF<R>>>> _(final A a) {
+                return new CF<B, CF<C, CF<D, CCF<R>>>>() {
+                    @Override
+                    public CF<C, CF<D, CCF<R>>> _(final B b) {
+                        return new CF<C, CF<D, CCF<R>>>() {
+                            @Override
+                            public CF<D, CCF<R>> _(final C c) {
+                                return new CF<D, CCF<R>>() {
+                                    @Override
+                                    public CCF<R> _(final D d) {
+                                        return new CCF<R>() {
+
+                                            @Override
+                                            public R invoke() {
+                                                return function.apply(a, b, c, d);
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static <A, B, C, D, E, R> CF<A, CF<B, CF<C, CF<D, CF<E, CCF<R>>>>>> curry(final F5<A, B, C, D, E, R> function) {
+        return new CF<A, CF<B, CF<C, CF<D, CF<E, CCF<R>>>>>>() {
+            @Override
+            public CF<B, CF<C, CF<D, CF<E, CCF<R>>>>> _(final A a) {
+                return new CF<B, CF<C, CF<D, CF<E, CCF<R>>>>>() {
+                    @Override
+                    public CF<C, CF<D, CF<E, CCF<R>>>> _(final B b) {
+                        return new CF<C, CF<D, CF<E, CCF<R>>>>() {
+                            @Override
+                            public CF<D, CF<E, CCF<R>>> _(final C c) {
+                                return new CF<D, CF<E, CCF<R>>>() {
+                                    @Override
+                                    public CF<E, CCF<R>> _(final D d) {
+                                        return new CF<E, CCF<R>>() {
+                                            @Override
+                                            public CCF<R> _(final E e) {
+                                                return new CCF<R>() {
+                                                    @Override
+                                                    public R invoke() {
+                                                        return function.apply(a, b, c, d, e);
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static interface MRFunction<T, R> {
+        
+        Tuple<T, R> apply(Monad<T, ?> monad) throws Throwable;
+    }
+    
+    public static interface MFunction<T, R> {
+        
+        R apply(Monad<T, ?> monad) throws Throwable;
+    }
+    
+    public static interface Monad<T, R> {
+        
+        boolean isDefined();
+
+        boolean isEmpty();
+        
+        T get();
+
+        Option<T> orElse(T value);
+        
+        T getOrElse(T value);
         
         Option<R> unit();
         
         Option<Object> error();
         
         void error(Object e);
+        
+        void unit(R r);
                     
         <A> Monad<A, Object> pure(A a);
         
-        <V> Monad<T, V> bind(MFunction<T, V> func);        
+        <V> Monad<T, V> bind(MRFunction<T, V> func);
+        
+        <V> Monad<T, V> bind(MFunction<T, V> func);
+       
+        <V> Monad<T, V> bind(Function<T, V> func);
+        
+        <V> Monad<T, V> bind(Action<T> func);
+        
+        <V> Monad<T, V> bind(CheckedFunction<T, V> func);
+        
+        <V> Monad<T, V> bind(CheckedAction<T> func);
     }
     
     public static class Monadic<T, R> extends Option<T> implements Monad<T, R> {
@@ -390,7 +687,7 @@ public class F {
         }
 
         @Override
-        public <V> Monad<T, V> bind(MFunction<T, V> func) {
+        public <V> Monad<T, V> bind(MRFunction<T, V> func) {
             try {
                 Tuple<T, V> tuple = func.apply(this);
                 T in = tuple._1;
@@ -400,11 +697,143 @@ public class F {
                     er = Option.some(error.get());
                 }
                 return new Monadic<T, V>(in, o, er);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 Option<V> ret = Option.none();
                 error = (Option) Option.some(e);
                 return new Monadic<T, V>(input, ret, error);
             }
+        }
+        
+        @Override
+        public <V> Monad<T, V> bind(MFunction<T, V> func) {
+            try {
+                Option<V> o = Option.maybe(func.apply(this));
+                Option<Object> er = Option.none();
+                if (error.isDefined()) {
+                    er = Option.some(error.get());
+                }
+                return new Monadic<T, V>(input, o, er);
+            } catch (Throwable e) {
+                Option<V> ret = Option.none();
+                error = (Option) Option.some(e);
+                return new Monadic<T, V>(input, ret, error);
+            }
+        }
+        
+        @Override
+        public <V> Monad<T, V> bind(Function<T, V> func) {
+            try {
+                Option<V> out = Option.maybe(func.apply(get()));
+                Option<Object> er = Option.none();
+                if (error.isDefined()) {
+                    er = Option.some(error.get());
+                }
+                return new Monadic<T, V>(this.input, out, er);
+            } catch (Throwable e) {
+                Option<V> ret = Option.none();
+                error = (Option) Option.some(e);
+                return new Monadic<T, V>(input, ret, error);
+            }
+        }
+        
+        @Override
+        public <V> Monad<T, V> bind(Action<T> func) {
+            try {
+                func.apply(get());
+                Option<V> out = Option.none();
+                Option<Object> er = Option.none();
+                if (error.isDefined()) {
+                    er = Option.some(error.get());
+                }
+                return new Monadic<T, V>(this.input, out, er);
+            } catch (Throwable e) {
+                Option<V> ret = Option.none();
+                error = (Option) Option.some(e);
+                return new Monadic<T, V>(input, ret, error);
+            }
+        }
+        
+        @Override
+        public <V> Monad<T, V> bind(final CheckedFunction<T, V> func) {
+            try {
+                Option<V> out = Option.maybe(func.apply(get()));
+                Option<Object> er = Option.none();
+                if (error.isDefined()) {
+                    er = Option.some(error.get());
+                }
+                return new Monadic<T, V>(this.input, out, er);
+            } catch (Throwable e) {
+                Option<V> ret = Option.none();
+                error = (Option) Option.some(e);
+                return new Monadic<T, V>(input, ret, error);
+            }
+        }
+        
+        @Override
+        public <V> Monad<T, V> bind(CheckedAction<T> func) {
+            try {
+                func.apply(get());
+                Option<V> out = Option.none();
+                Option<Object> er = Option.none();
+                if (error.isDefined()) {
+                    er = Option.some(error.get());
+                }
+                return new Monadic<T, V>(this.input, out, er);
+            } catch (Throwable e) {
+                Option<V> ret = Option.none();
+                error = (Option) Option.some(e);
+                return new Monadic<T, V>(input, ret, error);
+            }
+        }
+        
+        @Override
+        public <R> Option<R> map(Function<T, R> function) {
+            if (isDefined()) {
+                try {
+                    return Option.maybe(function.apply(get()));
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(Action<T> function) {
+            if (isDefined()) {
+                try {
+                    function.apply(get());
+                    return Option.maybe(get());
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+        
+        @Override
+        public <R> Option<R> map(CheckedFunction<T, R> function) {
+            if (isDefined()) {
+                try {
+                    return Option.maybe(function.apply(get()));
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(CheckedAction<T> function) {
+            if (isDefined()) {
+                try {
+                    function.apply(get());
+                    return Option.maybe(get());
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
         }
         
         @Override
@@ -446,6 +875,11 @@ public class F {
         @Override
         public void error(Object e) {
             error = Option.some(e);
+        }
+
+        @Override
+        public void unit(R r) {
+            unit = Option.maybe(r);
         }
     }
 }
