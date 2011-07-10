@@ -136,9 +136,13 @@ public final class Actors {
 
                     @Override
                     public void run() {
-                        executor.shutdownNow();
-                        remotingServer.stop(0);
-                        remotingServerExecutor.shutdownNow();
+                        try {
+                            executor.shutdownNow();
+                            remotingServer.stop(0);
+                            remotingServerExecutor.shutdownNow();
+                        } catch (Throwable t) {
+                            // nothing here
+                        }
                     }
                 });
         }

@@ -21,7 +21,7 @@ import java.util.Collections;
 import java.util.Iterator;
 
 /**
- * Utilities for everyday stuff functionnal style.
+ * Utilities for everyday stuff functional style.
  * 
  * Highly inspired by : https://github.com/playframework/play/blob/master/framework/src/play/libs/F.java
  *
