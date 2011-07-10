@@ -1,3 +1,20 @@
+/*
+ *  Copyright 2011 Mathieu ANCELIN
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *  under the License.
+ */
+
 package cx.ath.mancel01.utils;
 
 import java.util.Collections;
@@ -10,8 +27,12 @@ import java.util.Iterator;
  *
  * @author Mathieu ANCELIN
  */
-public class F {
+public final class F {
+
+    private F() {}
     
+    public static final Void VOID = null;
+
     public static interface Action<T> {
 
         void apply(T t);
@@ -30,26 +51,6 @@ public class F {
     public static interface CheckedFunction<T, R> {
 
         R apply(T t) throws Throwable;
-    }
-    
-    public static interface F2<A, B, R> {
-
-        R apply(A a, B b);
-    }
-    
-    public static interface F3<A, B, C, R> {
-
-        R apply(A a, B b, C c);
-    }
-    
-    public static interface F4<A, B, C, D, R> {
-
-        R apply(A a, B b, C c, D d);
-    }
-    
-    public static interface F5<A, B, C, D, E, R> {
-
-        R apply(A a, B b, C c, D d, E e);
     }
 
     final static None<Object> none = new None<Object>();
@@ -418,185 +419,6 @@ public class F {
         }
     }
     
-    public static class Tuple3<A, B, C> {
-
-        final public A _1;
-        final public B _2;
-        final public C _3;
-
-        public Tuple3(A _1, B _2, C _3) {
-            this._1 = _1;
-            this._2 = _2;
-            this._3 = _3;
-        }
-
-        @Override
-        public String toString() {
-            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 + " )";
-        }
-    }
-    
-    public static class Tuple4<A, B, C, D> {
-
-        final public A _1;
-        final public B _2;
-        final public C _3;
-        final public D _4;
-
-        public Tuple4(A _1, B _2, C _3, D _4) {
-            this._1 = _1;
-            this._2 = _2;
-            this._3 = _3;
-            this._4 = _4;
-        }
-
-        @Override
-        public String toString() {
-            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " 
-                    + _3 + ", _4: " + _4 + " )";
-        }
-    }
-    
-    public static class Tuple5<A, B, C, D, E> {
-
-        final public A _1;
-        final public B _2;
-        final public C _3;
-        final public D _4;
-        final public E _5;
-
-        public Tuple5(A _1, B _2, C _3, D _4, E _5) {
-            this._1 = _1;
-            this._2 = _2;
-            this._3 = _3;
-            this._4 = _4;
-            this._5 = _5;
-        }
-
-        @Override
-        public String toString() {
-            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 
-                    + ", _4: " + _4 + ", _5: " + _5 + " )";
-        }
-    }
-    
-    public static interface CF<C, R> {
-
-        R _(C arg);
-    }
-    
-    public static interface CCF<R> {
-        
-        R invoke();
-    }
-    
-    public static <A, B, R> CF<A, CF<B, CCF<R>>> curry(final F2<A, B, R> function) {
-        return new CF<A, CF<B, CCF<R>>>() {
-            @Override
-            public CF<B, CCF<R>> _(final A a) {
-                return new CF<B, CCF<R>>() {
-                    @Override
-                    public CCF<R> _(final B b) {
-                        return new CCF<R>() {
-                            @Override
-                            public R invoke() {
-                                return function.apply(a, b);
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
-    public static <A, B, C, R> CF<A, CF<B, CF<C, CCF<R>>>> curry(final F3<A, B, C, R> function) {
-        return new CF<A, CF<B, CF<C, CCF<R>>>>() {
-            @Override
-            public CF<B, CF<C, CCF<R>>> _(final A a) {
-                return new CF<B, CF<C, CCF<R>>>() {
-                    @Override
-                    public CF<C, CCF<R>> _(final B b) {
-                        return new CF<C, CCF<R>>() {
-                            @Override
-                            public CCF<R> _(final C c) {
-                                return new CCF<R>() {
-                                    @Override
-                                    public R invoke() {
-                                        return function.apply(a, b, c);
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
-    public static <A, B, C, D, R> CF<A, CF<B, CF<C, CF<D, CCF<R>>>>> curry(final F4<A, B, C, D, R> function) {
-        return new CF<A, CF<B, CF<C, CF<D, CCF<R>>>>>() {
-            @Override
-            public CF<B, CF<C, CF<D, CCF<R>>>> _(final A a) {
-                return new CF<B, CF<C, CF<D, CCF<R>>>>() {
-                    @Override
-                    public CF<C, CF<D, CCF<R>>> _(final B b) {
-                        return new CF<C, CF<D, CCF<R>>>() {
-                            @Override
-                            public CF<D, CCF<R>> _(final C c) {
-                                return new CF<D, CCF<R>>() {
-                                    @Override
-                                    public CCF<R> _(final D d) {
-                                        return new CCF<R>() {
-
-                                            @Override
-                                            public R invoke() {
-                                                return function.apply(a, b, c, d);
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
-    public static <A, B, C, D, E, R> CF<A, CF<B, CF<C, CF<D, CF<E, CCF<R>>>>>> curry(final F5<A, B, C, D, E, R> function) {
-        return new CF<A, CF<B, CF<C, CF<D, CF<E, CCF<R>>>>>>() {
-            @Override
-            public CF<B, CF<C, CF<D, CF<E, CCF<R>>>>> _(final A a) {
-                return new CF<B, CF<C, CF<D, CF<E, CCF<R>>>>>() {
-                    @Override
-                    public CF<C, CF<D, CF<E, CCF<R>>>> _(final B b) {
-                        return new CF<C, CF<D, CF<E, CCF<R>>>>() {
-                            @Override
-                            public CF<D, CF<E, CCF<R>>> _(final C c) {
-                                return new CF<D, CF<E, CCF<R>>>() {
-                                    @Override
-                                    public CF<E, CCF<R>> _(final D d) {
-                                        return new CF<E, CCF<R>>() {
-                                            @Override
-                                            public CCF<R> _(final E e) {
-                                                return new CCF<R>() {
-                                                    @Override
-                                                    public R invoke() {
-                                                        return function.apply(a, b, c, d, e);
-                                                    }
-                                                };
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
     public static interface MRFunction<T, R> {
         
         Tuple<T, R> apply(Monad<T, ?> monad) throws Throwable;
@@ -881,5 +703,634 @@ public class F {
         public void unit(R r) {
             unit = Option.maybe(r);
         }
+    }
+
+    public static interface F2<A, B, R> {
+
+        R apply(A a, B b);
+    }
+
+    public static interface F3<A, B, C, R> {
+
+        R apply(A a, B b, C c);
+    }
+
+    public static interface F4<A, B, C, D, R> {
+
+        R apply(A a, B b, C c, D d);
+    }
+
+    public static interface F5<A, B, C, D, E, R> {
+
+        R apply(A a, B b, C c, D d, E e);
+    }
+
+    public static interface F6<A, B, C, D, E, F, R> {
+
+        R apply(A a, B b, C c, D d, E e, F f);
+    }
+
+    public static interface F7<A, B, C, D, E, F, G, R> {
+
+        R apply(A a, B b, C c, D d, E e, F f, G g);
+    }
+
+    public static interface F8<A, B, C, D, E, F, G, H, R> {
+
+        R apply(A a, B b, C c, D d, E e, F f, G g, H h);
+    }
+
+    public static interface F9<A, B, C, D, E, F, G, H, I, R> {
+
+        R apply(A a, B b, C c, D d, E e, F f, G g, H h, I i);
+    }
+
+    public static interface F10<A, B, C, D, E, F, G, H, I, J, R> {
+
+        R apply(A a, B b, C c, D d, E e, F f, G g, H h, I i, J j);
+    }
+
+    public static class Tuple3<A, B, C> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+
+        public Tuple3(A _1, B _2, C _3) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3 + " )";
+        }
+    }
+
+    public static class Tuple4<A, B, C, D> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+
+        public Tuple4(A _1, B _2, C _3, D _4) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: "
+                + _3 + ", _4: " + _4 + " )";
+        }
+    }
+
+    public static class Tuple5<A, B, C, D, E> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+        final public E _5;
+
+        public Tuple5(A _1, B _2, C _3, D _4, E _5) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+            this._5 = _5;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3
+                + ", _4: " + _4 + ", _5: " + _5 + " )";
+        }
+    }
+
+    public static class Tuple6<A, B, C, D, E, F> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+        final public E _5;
+        final public F _6;
+
+        public Tuple6(A _1, B _2, C _3, D _4, E _5, F _6) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+            this._5 = _5;
+            this._6 = _6;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3
+                + ", _4: " + _4 + ", _5: " + _5 + ", _6: " + _6 + " )";
+        }
+    }
+
+    public static class Tuple7<A, B, C, D, E, F, G> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+        final public E _5;
+        final public F _6;
+        final public G _7;
+
+        public Tuple7(A _1, B _2, C _3, D _4, E _5, F _6, G _7) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+            this._5 = _5;
+            this._6 = _6;
+            this._7 = _7;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3
+                + ", _4: " + _4 + ", _5: " + _5 + ", _6: " + _6 + " )";
+        }
+    }
+
+    public static class Tuple8<A, B, C, D, E, F, G, H> {
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+        final public E _5;
+        final public F _6;
+        final public G _7;
+        final public H _8;
+
+        public Tuple8(A _1, B _2, C _3, D _4, E _5, F _6, G _7, H _8) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+            this._5 = _5;
+            this._6 = _6;
+            this._7 = _7;
+            this._8 = _8;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3
+                + ", _4: " + _4 + ", _5: " + _5 + ", _6: " + _6
+                + ", _7: " + _7 + ", _8: " + _8
+                + " )";
+        }
+    }
+
+    public static class Tuple9<A, B, C, D, E, F, G, H, I> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+        final public E _5;
+        final public F _6;
+        final public G _7;
+        final public H _8;
+        final public I _9;
+
+        public Tuple9(A _1, B _2, C _3, D _4, E _5, F _6, G _7, H _8, I _9) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+            this._5 = _5;
+            this._6 = _6;
+            this._7 = _7;
+            this._8 = _8;
+            this._9 = _9;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3
+                + ", _4: " + _4 + ", _5: " + _5 + ", _6: " + _6
+                + ", _7: " + _7 + ", _8: " + _8 + ", _9: " + _9
+                + " )";
+        }
+    }
+
+    public static class Tuple10<A, B, C, D, E, F, G, H, I, J> {
+
+        final public A _1;
+        final public B _2;
+        final public C _3;
+        final public D _4;
+        final public E _5;
+        final public F _6;
+        final public G _7;
+        final public H _8;
+        final public I _9;
+        final public J _10;
+
+        public Tuple10(A _1, B _2, C _3, D _4, E _5, F _6, G _7, H _8, I _9, J _10) {
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+            this._4 = _4;
+            this._5 = _5;
+            this._6 = _6;
+            this._7 = _7;
+            this._8 = _8;
+            this._9 = _9;
+            this._10 = _10;
+        }
+
+        @Override
+        public String toString() {
+            return "Tuple ( _1: " + _1 + ", _2: " + _2 + ", _3: " + _3
+                + ", _4: " + _4 + ", _5: " + _5 + ", _6: " + _6
+                + ", _7: " + _7 + ", _8: " + _8 + ", _9: " + _9
+                + ", _10: " + _10 + " )";
+        }
+    }
+
+    public static interface P<C, R> {
+
+        R _(C arg);
+    }
+    
+    public static interface Inv<R> {
+        
+        R invoke();
+    }
+    
+    public static <A, B, R> P<A, P<B, Inv<R>>> curry(final F2<A, B, R> function) {
+        return new P<A, P<B, Inv<R>>>() {
+            @Override
+            public P<B, Inv<R>> _(final A a) {
+                return new P<B, Inv<R>>() {
+                    @Override
+                    public Inv<R> _(final B b) {
+                        return new Inv<R>() {
+                            @Override
+                            public R invoke() {
+                                return function.apply(a, b);
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+
+    public static <A, B, C, R> P<A, P<B, P<C, Inv<R>>>> curry(final F3<A, B, C, R> function) {
+        return new P<A, P<B, P<C, Inv<R>>>>() {
+            @Override
+            public P<B, P<C, Inv<R>>> _(final A a) {
+                return new P<B, P<C, Inv<R>>>() {
+                    @Override
+                    public P<C, Inv<R>> _(final B b) {
+                        return new P<C, Inv<R>>() {
+                            @Override
+                            public Inv<R> _(final C c) {
+                                return new Inv<R>() {
+                                    @Override
+                                    public R invoke() {
+                                        return function.apply(a, b, c);
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+
+    public static <A, B, C, D, R> P<A, P<B, P<C, P<D, Inv<R>>>>> curry(final F4<A, B, C, D, R> function) {
+        return new P<A, P<B, P<C, P<D, Inv<R>>>>>() {
+            @Override
+            public P<B, P<C, P<D, Inv<R>>>> _(final A a) {
+                return new P<B, P<C, P<D, Inv<R>>>>() {
+                    @Override
+                    public P<C, P<D, Inv<R>>> _(final B b) {
+                        return new P<C, P<D, Inv<R>>>() {
+                            @Override
+                            public P<D, Inv<R>> _(final C c) {
+                                return new P<D, Inv<R>>() {
+                                    @Override
+                                    public Inv<R> _(final D d) {
+                                        return new Inv<R>() {
+
+                                            @Override
+                                            public R invoke() {
+                                                return function.apply(a, b, c, d);
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+
+    public static <A, B, C, D, E, R> P<A, P<B, P<C, P<D, P<E, Inv<R>>>>>> curry(final F5<A, B, C, D, E, R> function) {
+        return new P<A, P<B, P<C, P<D, P<E, Inv<R>>>>>>() {
+            @Override
+            public P<B, P<C, P<D, P<E, Inv<R>>>>> _(final A a) {
+                return new P<B, P<C, P<D, P<E, Inv<R>>>>>() {
+                    @Override
+                    public P<C, P<D, P<E, Inv<R>>>> _(final B b) {
+                        return new P<C, P<D, P<E, Inv<R>>>>() {
+                            @Override
+                            public P<D, P<E, Inv<R>>> _(final C c) {
+                                return new P<D, P<E, Inv<R>>>() {
+                                    @Override
+                                    public P<E, Inv<R>> _(final D d) {
+                                        return new P<E, Inv<R>>() {
+                                            @Override
+                                            public Inv<R> _(final E e) {
+                                                return new Inv<R>() {
+                                                    @Override
+                                                    public R invoke() {
+                                                        return function.apply(a, b, c, d, e);
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+
+    public static <A, B, C, D, E, F, R> 
+        P<A, P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>>> 
+            curry(final F6<A, B, C, D, E, F, R> function) {
+        return new P<A, P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>>>() {
+            @Override
+            public P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>> _(final A a) {
+                return new P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>>() {
+                    @Override
+                    public P<C, P<D, P<E, P<F, Inv<R>>>>> _(final B b) {
+                        return new P<C, P<D, P<E, P<F, Inv<R>>>>>() {
+                            @Override
+                            public P<D, P<E, P<F, Inv<R>>>> _(final C c) {
+                                return new P<D, P<E, P<F, Inv<R>>>>() {
+                                    @Override
+                                    public P<E, P<F, Inv<R>>> _(final D d) {
+                                        return new P<E, P<F, Inv<R>>>() {
+                                            @Override
+                                            public P<F, Inv<R>> _(final E e) {
+                                                return new P<F, Inv<R>>() {
+                                                    @Override
+                                                    public Inv<R> _(final F f) {
+                                                        return new Inv<R>() {
+                                                            @Override
+                                                            public R invoke() {
+                                                                return function.apply(a, b, c, d, e, f);
+                                                            }
+                                                        };
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static <A, B, C, D, E, F, G, R> 
+        P<A, P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>>> 
+            curry(final F7<A, B, C, D, E, F, G, R> function) {
+        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>>>() {
+            @Override
+            public P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>> _(final A a) {
+                return new P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>>() {
+                    @Override
+                    public P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>> _(final B b) {
+                        return new P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>() {
+                            @Override
+                            public P<D, P<E, P<F, P<G, Inv<R>>>>> _(final C c) {
+                                return new P<D, P<E, P<F, P<G, Inv<R>>>>>() {
+                                    @Override
+                                    public P<E, P<F, P<G, Inv<R>>>> _(final D d) {
+                                        return new P<E, P<F, P<G, Inv<R>>>>() {
+                                            @Override
+                                            public P<F, P<G, Inv<R>>> _(final E e) {
+                                                return new P<F, P<G, Inv<R>>>() {
+                                                    @Override
+                                                    public P<G, Inv<R>> _(final F f) {
+                                                        return new P<G, Inv<R>>() {
+                                                            @Override
+                                                            public Inv<R> _(final G g) {
+                                                                return new Inv<R>() {
+                                                                    @Override
+                                                                    public R invoke() {
+                                                                        return function.apply(a, b, c, d, e, f, g);
+                                                                    }
+                                                                };
+                                                            }
+                                                        };
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static <A, B, C, D, E, F, G, H, R> 
+        P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>>> 
+            curry(final F8<A, B, C, D, E, F, G, H, R> function) {
+        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>>>() {
+            @Override
+            public P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>> _(final A a) {
+                return new P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>>() {
+                    @Override
+                    public P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>> _(final B b) {
+                        return new P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>() {
+                            @Override
+                            public P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>> _(final C c) {
+                                return new P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>() {
+                                    @Override
+                                    public P<E, P<F, P<G, P<H, Inv<R>>>>> _(final D d) {
+                                        return new P<E, P<F, P<G, P<H, Inv<R>>>>>() {
+                                            @Override
+                                            public P<F, P<G, P<H, Inv<R>>>> _(final E e) {
+                                                return new P<F, P<G, P<H, Inv<R>>>>() {
+                                                    @Override
+                                                    public P<G, P<H, Inv<R>>> _(final F f) {
+                                                        return new P<G, P<H, Inv<R>>>() {
+                                                            @Override
+                                                            public P<H, Inv<R>> _(final G g) {
+                                                                return new P<H, Inv<R>>() {
+                                                                    @Override
+                                                                    public Inv<R> _(final H h) {
+                                                                        return new Inv<R>() {
+                                                                            @Override
+                                                                            public R invoke() {
+                                                                                return function.apply(a, b, c, d, e, f, g, h);
+                                                                            }
+                                                                        };
+                                                                    }
+                                                                };
+                                                            }
+                                                        };
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static <A, B, C, D, E, F, G, H, I, R> 
+        P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>>> 
+            curry(final F9<A, B, C, D, E, F, G, H, I, R> function) {
+        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>>>() {
+            @Override
+            public P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>> _(final A a) {
+                return new P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>>() {
+                    @Override
+                    public P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>> _(final B b) {
+                        return new P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>() {
+                            @Override
+                            public P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>> _(final C c) {
+                                return new P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>() {
+                                    @Override
+                                    public P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>> _(final D d) {
+                                        return new P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>() {
+                                            @Override
+                                            public P<F, P<G, P<H, P<I, Inv<R>>>>> _(final E e) {
+                                                return new P<F, P<G, P<H, P<I, Inv<R>>>>>() {
+                                                    @Override
+                                                    public P<G, P<H, P<I, Inv<R>>>> _(final F f) {
+                                                        return new P<G, P<H, P<I, Inv<R>>>>() {
+                                                            @Override
+                                                            public P<H, P<I, Inv<R>>> _(final G g) {
+                                                                return new P<H, P<I, Inv<R>>>() {
+                                                                    @Override
+                                                                    public P<I, Inv<R>> _(final H h) {
+                                                                        return new P<I, Inv<R>>() {
+                                                                            @Override
+                                                                            public Inv<R> _(final I i) {
+                                                                                return new Inv<R>() {
+                                                                                    @Override
+                                                                                    public R invoke() {
+                                                                                        return function.apply(a, b, c, d, e, f, g, h, i);
+                                                                                    }
+                                                                                };
+                                                                            }
+                                                                        };
+                                                                    }
+                                                                };
+                                                            }
+                                                        };
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+    }
+    
+    public static <A, B, C, D, E, F, G, H, I, J, R> 
+        P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>>> 
+            curry(final F10<A, B, C, D, E, F, G, H, I, J, R> function) {
+        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>>>() {
+            @Override
+            public P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>> _(final A a) {
+                return new P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>>() {
+                    @Override
+                    public P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>> _(final B b) {
+                        return new P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>() {
+                            @Override
+                            public P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>> _(final C c) {
+                                return new P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>() {
+                                    @Override
+                                    public P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>> _(final D d) {
+                                        return new P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>() {
+                                            @Override
+                                            public P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>> _(final E e) {
+                                                return new P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>() {
+                                                    @Override
+                                                    public P<G, P<H, P<I, P<J, Inv<R>>>>> _(final F f) {
+                                                        return new P<G, P<H, P<I, P<J, Inv<R>>>>>() {
+                                                            @Override
+                                                            public P<H, P<I, P<J, Inv<R>>>> _(final G g ) {
+                                                                return new P<H, P<I, P<J, Inv<R>>>>() {
+                                                                    @Override
+                                                                    public P<I, P<J, Inv<R>>> _(final H h) {
+                                                                        return new P<I, P<J, Inv<R>>>() {
+                                                                            @Override
+                                                                            public P<J, Inv<R>> _(final I i) {
+                                                                                return new P<J, Inv<R>>() {
+                                                                                    @Override
+                                                                                    public Inv<R> _(final J j) {
+                                                                                        return new Inv<R>() {
+                                                                                            @Override
+                                                                                            public R invoke() {
+                                                                                                return function.apply(a, b, c, d, e, f, g, h, i, j);
+                                                                                            }
+                                                                                        };
+                                                                                    }
+                                                                                };
+                                                                            }
+                                                                        };
+                                                                    }
+                                                                };
+                                                            }
+                                                        };
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
     }
 }

@@ -1,13 +1,30 @@
+/*
+ *  Copyright 2011 Mathieu ANCELIN
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *  under the License.
+ */
+
 package cx.ath.mancel01.utils;
 
 import java.io.PrintStream;
 
 /**
- * Utility class for messages printing.
+ * Utility class for messages printing in printstream.
  * 
  * @author mathieu_ancelin
  */
-public class SimpleConsoleLogger {
+public final class SimpleLogger {
 
     private static final int NORMAL = 0;
     private static final int BRIGHT = 1;
@@ -34,25 +51,43 @@ public class SimpleConsoleLogger {
     private static boolean trace = false;
     private static boolean colors = false;
 
+    private static PrintStream errorOut = System.err;
+    private static PrintStream infoOut = System.out;
+    private static PrintStream traceOut = System.out;
+
+    private SimpleLogger() {}
+
     public static void enableTrace(boolean trace) {
-        SimpleConsoleLogger.trace = trace;
+        SimpleLogger.trace = trace;
     }
 
     public static void enableColors(boolean colors) {
-        SimpleConsoleLogger.colors = colors;
+        SimpleLogger.colors = colors;
+    }
+
+    public static void setErrorOut(PrintStream errorOut) {
+        SimpleLogger.errorOut = errorOut;
+    }
+
+    public static void setInfoOut(PrintStream infoOut) {
+        SimpleLogger.infoOut = infoOut;
+    }
+
+    public static void setTraceOut(PrintStream traceOut) {
+        SimpleLogger.traceOut = traceOut;
     }
 
     public static void error(String message, Object... printable) {
-        print(ERROR_COLOUR, System.err, message, printable);
+        print(ERROR_COLOUR, errorOut, message, printable);
     }
 
     public static void info(String message, Object... printable) {
-        print(INFO_COLOUR, System.out, message, printable);
+        print(INFO_COLOUR, infoOut, message, printable);
     }
 
     public static void trace(String message, Object... printable) {
         if (trace) {
-            print(TRACE_COLOUR, System.out, TRACE_PREFIX + message, printable);
+            print(TRACE_COLOUR, traceOut, TRACE_PREFIX + message, printable);
         }
     }
 
