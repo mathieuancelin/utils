@@ -31,9 +31,11 @@ import java.util.Iterator;
  */
 public final class F {
 
-    private F() {}
-    
+    final static None<Object> none = new None<Object>();
+
     public static final Void VOID = null;
+
+    private F() {}
 
     public static interface Action<T> {
 
@@ -54,8 +56,6 @@ public final class F {
 
         R apply(T t) throws Throwable;
     }
-
-    final static None<Object> none = new None<Object>();
 
     public static abstract class Option<T> implements Iterable<T> {
         
