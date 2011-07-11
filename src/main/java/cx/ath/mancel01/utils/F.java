@@ -17,6 +17,8 @@
 
 package cx.ath.mancel01.utils;
 
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -74,6 +76,10 @@ public final class F {
         public abstract <R> Option<R> map(CheckedFunction<T, R> function);
         
         public abstract Option<T> map(CheckedAction<T> function);
+
+        public abstract <R> R bind(Function<T, R> function);
+
+        public abstract <R> R bind(CheckedFunction<T, R> function);
 
         public static <T> None<T> none() {
             return (None<T>) (Object) none;
@@ -143,6 +149,16 @@ public final class F {
         @Override
         public Option<T> map(CheckedAction<T> function) {
             return Option.none();
+        }
+
+        @Override
+        public <R> R bind(Function<T, R> trFunction) {
+            return null;
+        }
+
+        @Override
+        public <R> R bind(CheckedFunction<T, R> trCheckedFunction) {
+            return null;
         }
     }
 
@@ -224,6 +240,24 @@ public final class F {
                 return Option.maybe(get());
             } catch (Throwable t) {
                 return Option.none();
+            }
+        }
+
+        @Override
+        public <R> R bind(Function<T, R> function) {
+            try {
+                return function.apply(get());
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+
+        @Override
+        public <R> R bind(CheckedFunction<T, R> function) {
+            try {
+                return function.apply(get());
+            } catch (Throwable t) {
+                return null;
             }
         }
     }
@@ -338,6 +372,30 @@ public final class F {
             }
             return Option.none();
         }
+
+        @Override
+        public <R> R bind(Function<T, R> function) {
+            if (isDefined()) {
+                try {
+                    return function.apply(get());
+                } catch (Throwable t) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public <R> R bind(CheckedFunction<T, R> function) {
+            if (isDefined()) {
+                try {
+                    return function.apply(get());
+                } catch (Throwable t) {
+                    return null;
+                }
+            }
+            return null;
+        }
     }
 
     public static class Any<T> extends Some<T> {
@@ -429,7 +487,7 @@ public final class F {
         R apply(Monad<T, ?> monad) throws Throwable;
     }
     
-    public static interface Monad<T, R> {
+    public static interface Monad<T, R>  extends Iterable<T> {
         
         boolean isDefined();
 
@@ -450,7 +508,7 @@ public final class F {
         void unit(R r);
                     
         <A> Monad<A, Object> pure(A a);
-        
+
         <V> Monad<T, V> bind(MRFunction<T, V> func);
         
         <V> Monad<T, V> bind(MFunction<T, V> func);
@@ -464,7 +522,7 @@ public final class F {
         <V> Monad<T, V> bind(CheckedAction<T> func);
     }
     
-    public static class Monadic<T, R> extends Option<T> implements Monad<T, R> {
+    public static class Monadic<T, R> implements Monad<T, R> {
 
         private T input;
         
@@ -607,57 +665,7 @@ public final class F {
                 return new Monadic<T, V>(input, ret, error);
             }
         }
-        
-        @Override
-        public <R> Option<R> map(Function<T, R> function) {
-            if (isDefined()) {
-                try {
-                    return Option.maybe(function.apply(get()));
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
 
-        @Override
-        public Option<T> map(Action<T> function) {
-            if (isDefined()) {
-                try {
-                    function.apply(get());
-                    return Option.maybe(get());
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
-        
-        @Override
-        public <R> Option<R> map(CheckedFunction<T, R> function) {
-            if (isDefined()) {
-                try {
-                    return Option.maybe(function.apply(get()));
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> map(CheckedAction<T> function) {
-            if (isDefined()) {
-                try {
-                    function.apply(get());
-                    return Option.maybe(get());
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
-        
         @Override
         public T getOrElse(T value) {
             if (input == null) {
@@ -679,7 +687,7 @@ public final class F {
         @Override
         public Option<T> orElse(T value) {
             if (isDefined()) {
-                return this;
+                return Option.maybe(get());
             } else {
                 return Option.some(value);
             }
@@ -1332,5 +1340,81 @@ public final class F {
                 };
             }
         };
+    }
+
+    public static  class UncheckedAction<T> implements Action<T> {
+
+        private final CheckedAction<T> action;
+
+        public UncheckedAction(CheckedAction<T> action) {
+            this.action = action;
+        }
+
+        @Override
+        public void apply(T param) {
+            try {
+                action.apply(param);
+            } catch (Throwable t) {
+                throw new ExceptionWrapper(t);
+            }
+        }
+    }
+
+    public static class UncheckedFunction<T, R> implements Function<T, R> {
+
+        private final CheckedFunction<T, R> function;
+
+        public UncheckedFunction(CheckedFunction<T, R> function) {
+            this.function = function;
+        }
+
+        @Override
+        public R apply(T param) {
+            try {
+                return function.apply(param);
+            } catch (Throwable ex) {
+                throw new ExceptionWrapper(ex);
+            }
+        }
+    }
+
+    public static class ExceptionWrapper extends RuntimeException {
+        private final Throwable t;
+        public ExceptionWrapper(Throwable t) {
+            this.t = t;
+        }
+        public String getMessage() {
+            return t.getMessage();
+        }
+        public String getLocalizedMessage() {
+            return t.getLocalizedMessage();
+        }
+        public Throwable getCause() {
+            return t.getCause();
+        }
+        public synchronized Throwable initCause(Throwable throwable) {
+            return t.initCause(throwable);
+        }
+        public String toString() {
+            return t.toString();
+        }
+        public void printStackTrace() {
+            t.printStackTrace();
+        }
+        public void printStackTrace(PrintStream printStream) {
+            t.printStackTrace(printStream);
+        }
+        public void printStackTrace(PrintWriter printWriter) {
+            t.printStackTrace(printWriter);
+        }
+        public synchronized Throwable fillInStackTrace() {
+            return t.fillInStackTrace();
+        }
+        public StackTraceElement[] getStackTrace() {
+            return t.getStackTrace();
+        }
+        public void setStackTrace(StackTraceElement[] stackTraceElements) {
+            t.setStackTrace(stackTraceElements);
+        }
     }
 }
