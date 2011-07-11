@@ -26,6 +26,34 @@ public class UtilsTest implements Utils {
         String named = F.curry(naming)._("Mathieu")._("Ancelin").invoke();
         Assert.assertEquals(named, "Mathieu : Ancelin");
     }
+
+    @Test
+    public void testSimpleMonads() {
+        String base = "Hello !";
+
+        Option<String> val = Option.some(base);
+
+        Function<String, String> t = new Function<String, String>() {
+            @Override
+            public String apply(String value) {
+                return value.toUpperCase();
+            }
+        };
+
+        Function<String, String> t2 = new Function<String, String>() {
+            @Override
+            public String apply(String value) {
+                return value + value;
+            }
+        };
+
+        String ret1 = val.map(t).getOrElse("fail");
+        String ret2 = val.map(t2).getOrElse("fail");
+        String ret3 = val.map(t).map(t2).getOrElse("fail");
+        Assert.assertEquals(ret1, base.toUpperCase());
+        Assert.assertEquals(ret2, base + base);
+        Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
+    }
     
     @Test
     public void testMonads() {
