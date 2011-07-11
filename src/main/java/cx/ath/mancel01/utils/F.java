@@ -57,7 +57,22 @@ public final class F {
         R apply(T t) throws Throwable;
     }
 
-    public static abstract class Option<T> implements Iterable<T> {
+    public static interface Monad<T> {
+
+        <R> Option<R> map(Function<T, R> function);
+
+        Option<T> map(Action<T> function);
+
+        <R> Option<R> map(CheckedFunction<T, R> function);
+
+        Option<T> map(CheckedAction<T> function);
+
+        Option<T> bind(Action<Option<T>> action);
+
+        Option<T> bind(CheckedAction<Option<T>> action);
+    }
+
+    public static abstract class Option<T> implements Iterable<T>, Monad<T> {
         
         public abstract boolean isDefined();
 
@@ -68,18 +83,6 @@ public final class F {
         public abstract Option<T> orElse(T value);
         
         public abstract T getOrElse(T value);
-        
-        public abstract <R> Option<R> map(Function<T, R> function);
-        
-        public abstract Option<T> map(Action<T> function);
-        
-        public abstract <R> Option<R> map(CheckedFunction<T, R> function);
-        
-        public abstract Option<T> map(CheckedAction<T> function);
-
-        public abstract <R> R bind(Function<T, R> function);
-
-        public abstract <R> R bind(CheckedFunction<T, R> function);
 
         public static <T> None<T> none() {
             return (None<T>) (Object) none;
@@ -152,13 +155,13 @@ public final class F {
         }
 
         @Override
-        public <R> R bind(Function<T, R> trFunction) {
-            return null;
+        public Option<T> bind(Action<Option<T>> action) {
+            return Option.none();
         }
 
         @Override
-        public <R> R bind(CheckedFunction<T, R> trCheckedFunction) {
-            return null;
+        public Option<T> bind(CheckedAction<Option<T>> action) {
+            return Option.none();
         }
     }
 
@@ -244,21 +247,21 @@ public final class F {
         }
 
         @Override
-        public <R> R bind(Function<T, R> function) {
+        public Option<T> bind(Action<Option<T>> action) {
             try {
-                return function.apply(get());
+                action.apply(this);
             } catch (Throwable t) {
-                return null;
             }
+            return this;
         }
 
         @Override
-        public <R> R bind(CheckedFunction<T, R> function) {
+        public Option<T> bind(CheckedAction<Option<T>> action) {
             try {
-                return function.apply(get());
+                action.apply(this);
             } catch (Throwable t) {
-                return null;
             }
+            return this;
         }
     }
     
@@ -374,27 +377,29 @@ public final class F {
         }
 
         @Override
-        public <R> R bind(Function<T, R> function) {
+        public Option<T> bind(Action<Option<T>> action) {
             if (isDefined()) {
                 try {
-                    return function.apply(get());
+                    action.apply(this);
+                    return this;
                 } catch (Throwable t) {
-                    return null;
+                    return this;
                 }
             }
-            return null;
+            return Option.none();
         }
 
         @Override
-        public <R> R bind(CheckedFunction<T, R> function) {
-            if (isDefined()) {
+        public Option<T> bind(CheckedAction<Option<T>> action) {
+           if (isDefined()) {
                 try {
-                    return function.apply(get());
+                    action.apply(this);
+                    return this;
                 } catch (Throwable t) {
-                    return null;
+                    return this;
                 }
             }
-            return null;
+            return Option.none();
         }
     }
 
@@ -474,242 +479,6 @@ public final class F {
         @Override
         public String toString() {
             return "Tuple ( _1: " + _1 + ", _2: " + _2 + " )";
-        }
-    }
-    
-    public static interface MRFunction<T, R> {
-        
-        Tuple<T, R> apply(Monad<T, ?> monad) throws Throwable;
-    }
-    
-    public static interface MFunction<T, R> {
-        
-        R apply(Monad<T, ?> monad) throws Throwable;
-    }
-    
-    public static interface Monad<T, R>  extends Iterable<T> {
-        
-        boolean isDefined();
-
-        boolean isEmpty();
-        
-        T get();
-
-        Option<T> orElse(T value);
-        
-        T getOrElse(T value);
-        
-        Option<R> unit();
-        
-        Option<Object> error();
-        
-        void error(Object e);
-        
-        void unit(R r);
-                    
-        <A> Monad<A, Object> pure(A a);
-
-        <V> Monad<T, V> bind(MRFunction<T, V> func);
-        
-        <V> Monad<T, V> bind(MFunction<T, V> func);
-       
-        <V> Monad<T, V> bind(Function<T, V> func);
-        
-        <V> Monad<T, V> bind(Action<T> func);
-        
-        <V> Monad<T, V> bind(CheckedFunction<T, V> func);
-        
-        <V> Monad<T, V> bind(CheckedAction<T> func);
-    }
-    
-    public static class Monadic<T, R> implements Monad<T, R> {
-
-        private T input;
-        
-        private Option<R> unit;
-        
-        private Option<Object> error;
-
-        private Monadic(T input, Option<R> unit, Option<Object> error) {
-            this.input = input;
-            this.unit = unit;
-            this.error = error;
-        }
-
-        @Override
-        public boolean isDefined() {
-            return !(input == null);
-        }
-
-        @Override
-        public T get() {
-            return input;
-        }
-        
-        @Override
-        public Option<R> unit() {
-            return unit;
-        }
-
-        @Override
-        public String toString() {
-            return "Monad ( " + input + " => " + unit + " : " + error + " )";
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return !isDefined();
-        }
-
-        @Override
-        public <A> Monad<A, Object> pure(A value) {
-            return Monadic.monad(value);
-        }
-
-        @Override
-        public <V> Monad<T, V> bind(MRFunction<T, V> func) {
-            try {
-                Tuple<T, V> tuple = func.apply(this);
-                T in = tuple._1;
-                Option<V> o = Option.maybe(tuple._2);
-                Option<Object> er = Option.none();
-                if (error.isDefined()) {
-                    er = Option.some(error.get());
-                }
-                return new Monadic<T, V>(in, o, er);
-            } catch (Throwable e) {
-                Option<V> ret = Option.none();
-                error = (Option) Option.some(e);
-                return new Monadic<T, V>(input, ret, error);
-            }
-        }
-        
-        @Override
-        public <V> Monad<T, V> bind(MFunction<T, V> func) {
-            try {
-                Option<V> o = Option.maybe(func.apply(this));
-                Option<Object> er = Option.none();
-                if (error.isDefined()) {
-                    er = Option.some(error.get());
-                }
-                return new Monadic<T, V>(input, o, er);
-            } catch (Throwable e) {
-                Option<V> ret = Option.none();
-                error = (Option) Option.some(e);
-                return new Monadic<T, V>(input, ret, error);
-            }
-        }
-        
-        @Override
-        public <V> Monad<T, V> bind(Function<T, V> func) {
-            try {
-                Option<V> out = Option.maybe(func.apply(get()));
-                Option<Object> er = Option.none();
-                if (error.isDefined()) {
-                    er = Option.some(error.get());
-                }
-                return new Monadic<T, V>(this.input, out, er);
-            } catch (Throwable e) {
-                Option<V> ret = Option.none();
-                error = (Option) Option.some(e);
-                return new Monadic<T, V>(input, ret, error);
-            }
-        }
-        
-        @Override
-        public <V> Monad<T, V> bind(Action<T> func) {
-            try {
-                func.apply(get());
-                Option<V> out = Option.none();
-                Option<Object> er = Option.none();
-                if (error.isDefined()) {
-                    er = Option.some(error.get());
-                }
-                return new Monadic<T, V>(this.input, out, er);
-            } catch (Throwable e) {
-                Option<V> ret = Option.none();
-                error = (Option) Option.some(e);
-                return new Monadic<T, V>(input, ret, error);
-            }
-        }
-        
-        @Override
-        public <V> Monad<T, V> bind(final CheckedFunction<T, V> func) {
-            try {
-                Option<V> out = Option.maybe(func.apply(get()));
-                Option<Object> er = Option.none();
-                if (error.isDefined()) {
-                    er = Option.some(error.get());
-                }
-                return new Monadic<T, V>(this.input, out, er);
-            } catch (Throwable e) {
-                Option<V> ret = Option.none();
-                error = (Option) Option.some(e);
-                return new Monadic<T, V>(input, ret, error);
-            }
-        }
-        
-        @Override
-        public <V> Monad<T, V> bind(CheckedAction<T> func) {
-            try {
-                func.apply(get());
-                Option<V> out = Option.none();
-                Option<Object> er = Option.none();
-                if (error.isDefined()) {
-                    er = Option.some(error.get());
-                }
-                return new Monadic<T, V>(this.input, out, er);
-            } catch (Throwable e) {
-                Option<V> ret = Option.none();
-                error = (Option) Option.some(e);
-                return new Monadic<T, V>(input, ret, error);
-            }
-        }
-
-        @Override
-        public T getOrElse(T value) {
-            if (input == null) {
-                return value;
-            } else {
-                return input;
-            }
-        }
-
-        @Override
-        public Iterator<T> iterator() {
-            if (input == null) {
-                return Collections.<T>emptyList().iterator();
-            } else {
-                return Collections.singletonList(input).iterator();
-            }
-        }
-
-        @Override
-        public Option<T> orElse(T value) {
-            if (isDefined()) {
-                return Option.maybe(get());
-            } else {
-                return Option.some(value);
-            }
-        }
-                
-        public static <T> Monad<T, Object> monad(T value) {
-            return new Monadic<T, Object>(value, Option.none(), Option.none());
-        }
-
-        @Override
-        public Option<Object> error() {
-            return error;
-        }
-
-        @Override
-        public void error(Object e) {
-            error = Option.some(e);
-        }
-
-        @Override
-        public void unit(R r) {
-            unit = Option.maybe(r);
         }
     }
 
@@ -970,378 +739,6 @@ public final class F {
         }
     }
 
-    public static interface P<C, R> {
-
-        R _(C arg);
-    }
-    
-    public static interface Inv<R> {
-        
-        R invoke();
-    }
-    
-    public static <A, B, R> P<A, P<B, Inv<R>>> curry(final F2<A, B, R> function) {
-        return new P<A, P<B, Inv<R>>>() {
-            @Override
-            public P<B, Inv<R>> _(final A a) {
-                return new P<B, Inv<R>>() {
-                    @Override
-                    public Inv<R> _(final B b) {
-                        return new Inv<R>() {
-                            @Override
-                            public R invoke() {
-                                return function.apply(a, b);
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-
-    public static <A, B, C, R> P<A, P<B, P<C, Inv<R>>>> curry(final F3<A, B, C, R> function) {
-        return new P<A, P<B, P<C, Inv<R>>>>() {
-            @Override
-            public P<B, P<C, Inv<R>>> _(final A a) {
-                return new P<B, P<C, Inv<R>>>() {
-                    @Override
-                    public P<C, Inv<R>> _(final B b) {
-                        return new P<C, Inv<R>>() {
-                            @Override
-                            public Inv<R> _(final C c) {
-                                return new Inv<R>() {
-                                    @Override
-                                    public R invoke() {
-                                        return function.apply(a, b, c);
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-
-    public static <A, B, C, D, R> P<A, P<B, P<C, P<D, Inv<R>>>>> curry(final F4<A, B, C, D, R> function) {
-        return new P<A, P<B, P<C, P<D, Inv<R>>>>>() {
-            @Override
-            public P<B, P<C, P<D, Inv<R>>>> _(final A a) {
-                return new P<B, P<C, P<D, Inv<R>>>>() {
-                    @Override
-                    public P<C, P<D, Inv<R>>> _(final B b) {
-                        return new P<C, P<D, Inv<R>>>() {
-                            @Override
-                            public P<D, Inv<R>> _(final C c) {
-                                return new P<D, Inv<R>>() {
-                                    @Override
-                                    public Inv<R> _(final D d) {
-                                        return new Inv<R>() {
-
-                                            @Override
-                                            public R invoke() {
-                                                return function.apply(a, b, c, d);
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-
-    public static <A, B, C, D, E, R> P<A, P<B, P<C, P<D, P<E, Inv<R>>>>>> curry(final F5<A, B, C, D, E, R> function) {
-        return new P<A, P<B, P<C, P<D, P<E, Inv<R>>>>>>() {
-            @Override
-            public P<B, P<C, P<D, P<E, Inv<R>>>>> _(final A a) {
-                return new P<B, P<C, P<D, P<E, Inv<R>>>>>() {
-                    @Override
-                    public P<C, P<D, P<E, Inv<R>>>> _(final B b) {
-                        return new P<C, P<D, P<E, Inv<R>>>>() {
-                            @Override
-                            public P<D, P<E, Inv<R>>> _(final C c) {
-                                return new P<D, P<E, Inv<R>>>() {
-                                    @Override
-                                    public P<E, Inv<R>> _(final D d) {
-                                        return new P<E, Inv<R>>() {
-                                            @Override
-                                            public Inv<R> _(final E e) {
-                                                return new Inv<R>() {
-                                                    @Override
-                                                    public R invoke() {
-                                                        return function.apply(a, b, c, d, e);
-                                                    }
-                                                };
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-
-    public static <A, B, C, D, E, F, R> 
-        P<A, P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>>> 
-            curry(final F6<A, B, C, D, E, F, R> function) {
-        return new P<A, P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>>>() {
-            @Override
-            public P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>> _(final A a) {
-                return new P<B, P<C, P<D, P<E, P<F, Inv<R>>>>>>() {
-                    @Override
-                    public P<C, P<D, P<E, P<F, Inv<R>>>>> _(final B b) {
-                        return new P<C, P<D, P<E, P<F, Inv<R>>>>>() {
-                            @Override
-                            public P<D, P<E, P<F, Inv<R>>>> _(final C c) {
-                                return new P<D, P<E, P<F, Inv<R>>>>() {
-                                    @Override
-                                    public P<E, P<F, Inv<R>>> _(final D d) {
-                                        return new P<E, P<F, Inv<R>>>() {
-                                            @Override
-                                            public P<F, Inv<R>> _(final E e) {
-                                                return new P<F, Inv<R>>() {
-                                                    @Override
-                                                    public Inv<R> _(final F f) {
-                                                        return new Inv<R>() {
-                                                            @Override
-                                                            public R invoke() {
-                                                                return function.apply(a, b, c, d, e, f);
-                                                            }
-                                                        };
-                                                    }
-                                                };
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
-    public static <A, B, C, D, E, F, G, R> 
-        P<A, P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>>> 
-            curry(final F7<A, B, C, D, E, F, G, R> function) {
-        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>>>() {
-            @Override
-            public P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>> _(final A a) {
-                return new P<B, P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>>() {
-                    @Override
-                    public P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>> _(final B b) {
-                        return new P<C, P<D, P<E, P<F, P<G, Inv<R>>>>>>() {
-                            @Override
-                            public P<D, P<E, P<F, P<G, Inv<R>>>>> _(final C c) {
-                                return new P<D, P<E, P<F, P<G, Inv<R>>>>>() {
-                                    @Override
-                                    public P<E, P<F, P<G, Inv<R>>>> _(final D d) {
-                                        return new P<E, P<F, P<G, Inv<R>>>>() {
-                                            @Override
-                                            public P<F, P<G, Inv<R>>> _(final E e) {
-                                                return new P<F, P<G, Inv<R>>>() {
-                                                    @Override
-                                                    public P<G, Inv<R>> _(final F f) {
-                                                        return new P<G, Inv<R>>() {
-                                                            @Override
-                                                            public Inv<R> _(final G g) {
-                                                                return new Inv<R>() {
-                                                                    @Override
-                                                                    public R invoke() {
-                                                                        return function.apply(a, b, c, d, e, f, g);
-                                                                    }
-                                                                };
-                                                            }
-                                                        };
-                                                    }
-                                                };
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
-    public static <A, B, C, D, E, F, G, H, R> 
-        P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>>> 
-            curry(final F8<A, B, C, D, E, F, G, H, R> function) {
-        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>>>() {
-            @Override
-            public P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>> _(final A a) {
-                return new P<B, P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>>() {
-                    @Override
-                    public P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>> _(final B b) {
-                        return new P<C, P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>>() {
-                            @Override
-                            public P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>> _(final C c) {
-                                return new P<D, P<E, P<F, P<G, P<H, Inv<R>>>>>>() {
-                                    @Override
-                                    public P<E, P<F, P<G, P<H, Inv<R>>>>> _(final D d) {
-                                        return new P<E, P<F, P<G, P<H, Inv<R>>>>>() {
-                                            @Override
-                                            public P<F, P<G, P<H, Inv<R>>>> _(final E e) {
-                                                return new P<F, P<G, P<H, Inv<R>>>>() {
-                                                    @Override
-                                                    public P<G, P<H, Inv<R>>> _(final F f) {
-                                                        return new P<G, P<H, Inv<R>>>() {
-                                                            @Override
-                                                            public P<H, Inv<R>> _(final G g) {
-                                                                return new P<H, Inv<R>>() {
-                                                                    @Override
-                                                                    public Inv<R> _(final H h) {
-                                                                        return new Inv<R>() {
-                                                                            @Override
-                                                                            public R invoke() {
-                                                                                return function.apply(a, b, c, d, e, f, g, h);
-                                                                            }
-                                                                        };
-                                                                    }
-                                                                };
-                                                            }
-                                                        };
-                                                    }
-                                                };
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
-    public static <A, B, C, D, E, F, G, H, I, R> 
-        P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>>> 
-            curry(final F9<A, B, C, D, E, F, G, H, I, R> function) {
-        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>>>() {
-            @Override
-            public P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>> _(final A a) {
-                return new P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>>() {
-                    @Override
-                    public P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>> _(final B b) {
-                        return new P<C, P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>>() {
-                            @Override
-                            public P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>> _(final C c) {
-                                return new P<D, P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>>() {
-                                    @Override
-                                    public P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>> _(final D d) {
-                                        return new P<E, P<F, P<G, P<H, P<I, Inv<R>>>>>>() {
-                                            @Override
-                                            public P<F, P<G, P<H, P<I, Inv<R>>>>> _(final E e) {
-                                                return new P<F, P<G, P<H, P<I, Inv<R>>>>>() {
-                                                    @Override
-                                                    public P<G, P<H, P<I, Inv<R>>>> _(final F f) {
-                                                        return new P<G, P<H, P<I, Inv<R>>>>() {
-                                                            @Override
-                                                            public P<H, P<I, Inv<R>>> _(final G g) {
-                                                                return new P<H, P<I, Inv<R>>>() {
-                                                                    @Override
-                                                                    public P<I, Inv<R>> _(final H h) {
-                                                                        return new P<I, Inv<R>>() {
-                                                                            @Override
-                                                                            public Inv<R> _(final I i) {
-                                                                                return new Inv<R>() {
-                                                                                    @Override
-                                                                                    public R invoke() {
-                                                                                        return function.apply(a, b, c, d, e, f, g, h, i);
-                                                                                    }
-                                                                                };
-                                                                            }
-                                                                        };
-                                                                    }
-                                                                };
-                                                            }
-                                                        };
-                                                    }
-                                                };
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-    
-    public static <A, B, C, D, E, F, G, H, I, J, R> 
-        P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>>> 
-            curry(final F10<A, B, C, D, E, F, G, H, I, J, R> function) {
-        return new P<A, P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>>>() {
-            @Override
-            public P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>> _(final A a) {
-                return new P<B, P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>>() {
-                    @Override
-                    public P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>> _(final B b) {
-                        return new P<C, P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>>() {
-                            @Override
-                            public P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>> _(final C c) {
-                                return new P<D, P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>>() {
-                                    @Override
-                                    public P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>> _(final D d) {
-                                        return new P<E, P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>>() {
-                                            @Override
-                                            public P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>> _(final E e) {
-                                                return new P<F, P<G, P<H, P<I, P<J, Inv<R>>>>>>() {
-                                                    @Override
-                                                    public P<G, P<H, P<I, P<J, Inv<R>>>>> _(final F f) {
-                                                        return new P<G, P<H, P<I, P<J, Inv<R>>>>>() {
-                                                            @Override
-                                                            public P<H, P<I, P<J, Inv<R>>>> _(final G g ) {
-                                                                return new P<H, P<I, P<J, Inv<R>>>>() {
-                                                                    @Override
-                                                                    public P<I, P<J, Inv<R>>> _(final H h) {
-                                                                        return new P<I, P<J, Inv<R>>>() {
-                                                                            @Override
-                                                                            public P<J, Inv<R>> _(final I i) {
-                                                                                return new P<J, Inv<R>>() {
-                                                                                    @Override
-                                                                                    public Inv<R> _(final J j) {
-                                                                                        return new Inv<R>() {
-                                                                                            @Override
-                                                                                            public R invoke() {
-                                                                                                return function.apply(a, b, c, d, e, f, g, h, i, j);
-                                                                                            }
-                                                                                        };
-                                                                                    }
-                                                                                };
-                                                                            }
-                                                                        };
-                                                                    }
-                                                                };
-                                                            }
-                                                        };
-                                                    }
-                                                };
-                                            }
-                                        };
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
-    }
-
     public static  class UncheckedAction<T> implements Action<T> {
 
         private final CheckedAction<T> action;
@@ -1379,40 +776,64 @@ public final class F {
     }
 
     public static class ExceptionWrapper extends RuntimeException {
+
         private final Throwable t;
+
         public ExceptionWrapper(Throwable t) {
             this.t = t;
         }
+
+        @Override
         public String getMessage() {
             return t.getMessage();
         }
+
+        @Override
         public String getLocalizedMessage() {
             return t.getLocalizedMessage();
         }
+
+        @Override
         public Throwable getCause() {
             return t.getCause();
         }
+
+        @Override
         public synchronized Throwable initCause(Throwable throwable) {
             return t.initCause(throwable);
         }
+
+        @Override
         public String toString() {
             return t.toString();
         }
+
+        @Override
         public void printStackTrace() {
             t.printStackTrace();
         }
+
+        @Override
         public void printStackTrace(PrintStream printStream) {
             t.printStackTrace(printStream);
         }
+
+        @Override
         public void printStackTrace(PrintWriter printWriter) {
             t.printStackTrace(printWriter);
         }
+
+        @Override
         public synchronized Throwable fillInStackTrace() {
             return t.fillInStackTrace();
         }
+
+        @Override
         public StackTraceElement[] getStackTrace() {
             return t.getStackTrace();
         }
+
+        @Override
         public void setStackTrace(StackTraceElement[] stackTraceElements) {
             t.setStackTrace(stackTraceElements);
         }

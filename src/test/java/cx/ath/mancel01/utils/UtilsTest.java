@@ -23,7 +23,7 @@ public class UtilsTest implements Utils {
                 return name + " : " + surname;
             }
         };
-        String named = F.curry(naming)._("Mathieu")._("Ancelin").invoke();
+        String named = curry(naming)._("Mathieu")._("Ancelin").invoke();
         Assert.assertEquals(named, "Mathieu : Ancelin");
     }
 
@@ -54,63 +54,57 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(ret2, base + base);
         Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
 
-        Function<Socket, Socket> connect = new Function<Socket, Socket>() {
+        Action<Socket> connect = new Action<Socket>() {
             @Override
-            public Socket apply(Socket socket) {
+            public void apply(Socket socket) {
                 if (!socket.connect()) {
                     throw new RuntimeException("socket error");
                 }
-                return socket;
             }
         };
 
-        Function<Socket, Socket> disconnect = new Function<Socket, Socket>() {
+        Action<Socket> disconnect = new Action<Socket>() {
             @Override
-            public Socket apply(Socket socket) {
+            public void apply(Socket socket) {
                 if (!socket.disconnect()) {
                     throw new RuntimeException("socket error");
                 }
-                return socket;
             }
         };
 
-        Function<BadSocket, BadSocket> connect2 = new Function<BadSocket, BadSocket>() {
+        Action<BadSocket> connect2 = new Action<BadSocket>() {
             @Override
-            public BadSocket apply(BadSocket socket) {
+            public void apply(BadSocket socket) {
                 if (!socket.connect()) {
                     throw new RuntimeException("socket error");
                 }
-                return socket;
             }
         };
 
-        Function<BadSocket, BadSocket> disconnect2 = new Function<BadSocket, BadSocket>() {
+        Action<BadSocket> disconnect2 = new Action<BadSocket>() {
             @Override
-            public BadSocket apply(BadSocket socket) {
+            public void apply(BadSocket socket) {
                 if (!socket.disconnect()) {
                     throw new RuntimeException("socket error");
                 }
-                return socket;
             }
         };
 
-        Function<Socket, Socket> send = new Function<Socket, Socket>() {
+        Action<Socket> send = new Action<Socket>() {
             @Override
-            public Socket apply(Socket socket) {
+            public void apply(Socket socket) {
                 if (!socket.send("Hello")) {
                     throw new RuntimeException("socket error");
                 }
-                return socket;
             }
         };
 
-        Function<BadSocket, BadSocket> send2 = new Function<BadSocket, BadSocket>() {
+        Action<BadSocket> send2 = new Action<BadSocket>() {
             @Override
-            public BadSocket apply(BadSocket socket) {
+            public void apply(BadSocket socket) {
                 if (!socket.send("Hello")) {
                     throw new RuntimeException("socket error");
                 }
-                return socket;
             }
         };
 
@@ -126,112 +120,6 @@ public class UtilsTest implements Utils {
         Assert.assertTrue(socket.get().sendCalled);
         Assert.assertTrue(socket.get().disconnectCalled);
 
-        Assert.assertTrue(socket2.get().connectCalled);
-        Assert.assertFalse(socket2.get().sendCalled);
-        Assert.assertFalse(socket2.get().disconnectCalled);
-    }
-    
-    @Test
-    public void testMonads() {
-        String base = "Hello !";
-        
-        Monad<String, Object> val = Monadic.monad(base);
-        
-        MRFunction<String, String> t = new MRFunction<String, String>() {
-
-            @Override
-            public Tuple<String, String> apply(Monad<String, ?> monad) {
-                String result = monad.get().toUpperCase();
-                return new Tuple<String, String>(result, result);
-            }
-        };
-        
-        MRFunction<String, String> t2 = new MRFunction<String, String>() {
-
-            @Override
-            public Tuple<String, String> apply(Monad<String, ?> monad) {
-                String result = monad.get() + monad.get();
-                return new Tuple<String, String>(result, result);
-            }
-        };
-        
-        String ret1 = val.bind(t).unit().getOrElse("fail");
-        String ret2 = val.bind(t2).unit().getOrElse("fail");
-        String ret3 = val.bind(t).bind(t2).unit().getOrElse("fail");
-        Assert.assertEquals(ret1, base.toUpperCase());
-        Assert.assertEquals(ret2, base + base);
-        Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
-        
-        MRFunction<Socket, Boolean> connect = new MRFunction<Socket, Boolean>() {
-
-            @Override
-            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
-                Boolean result = false;
-                if (!monad.error().isDefined()) {
-                    result = monad.get().connect();
-                    if (!result)
-                        monad.error("Connection  denied");
-                }
-                return new Tuple<Socket, Boolean>(monad.get(), result);
-            }
-        };
-        
-        MRFunction<Socket, Boolean> disconnect = new MRFunction<Socket, Boolean>() {
-
-            @Override
-            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
-                Boolean result = false;
-                if (!monad.error().isDefined()) {
-                    result = monad.get().disconnect();
-                    if (!result)
-                        monad.error("Disconnection error");
-                }
-                return new Tuple<Socket, Boolean>(monad.get(), result);
-            }
-        };
-        
-        MRFunction<BadSocket, Boolean> connect2 = new MRFunction<BadSocket, Boolean>() {
-
-            @Override
-            public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
-                Boolean result = false;
-                if (!monad.error().isDefined()) {
-                    result = monad.get().connect();
-                    if (!result)
-                        monad.error("Connection error");
-                }
-                return new Tuple<BadSocket, Boolean>(monad.get(), result);
-            }
-        };
-        
-        MRFunction<BadSocket, Boolean> disconnect2 = new MRFunction<BadSocket, Boolean>() {
-
-            @Override
-            public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
-                Boolean result = false;
-                if (!monad.error().isDefined()) {
-                    result = monad.get().disconnect();
-                    if (!result)
-                        monad.error("Disconnection error");
-                }
-                return new Tuple<BadSocket, Boolean>(monad.get(), result);
-            }
-        };
-        
-        SendFunction send = new SendFunction();
-        SendFunction2 send2 = new SendFunction2();
-        Monad<Socket, Object> socket = Monadic.monad(new Socket());
-        Monad<BadSocket, Object> socket2 = Monadic.monad(new BadSocket());
-        
-        socket.bind(connect).bind(send.text("Hello")).bind(disconnect);
-        socket2.bind(connect2).bind(send2.text("Hello")).bind(disconnect2);
-        
-        Assert.assertTrue(socket.isDefined());
-        
-        Assert.assertTrue(socket.get().connectCalled);
-        Assert.assertTrue(socket.get().sendCalled);
-        Assert.assertTrue(socket.get().disconnectCalled);
-        
         Assert.assertTrue(socket2.get().connectCalled);
         Assert.assertFalse(socket2.get().sendCalled);
         Assert.assertFalse(socket2.get().disconnectCalled);
@@ -617,13 +505,13 @@ public class UtilsTest implements Utils {
     public void curryTest2() {
         Utils u = target(this, Utils.class);
 
-        String value = curry(u.concat(n, n, n))._("A")._("B")._("C").get();
+        String value = curryM(u.concat(n, n, n))._("A")._("B")._("C").get();
 
         String expected = "ABC";
         Assert.assertEquals(expected, value);
 
         CurryFunction<String> function =
-                curry(u.concat(n, n, n))._("A")._("B");
+                curryM(u.concat(n, n, n))._("A")._("B");
         String value2 =
                 function._("C").get();
         String value22 =
@@ -636,7 +524,7 @@ public class UtilsTest implements Utils {
         Assert.assertEquals("ABE", value222);
 
         function =
-                curry(u.concat(0, n, 0L))._(new Long(3))._("2");
+                curryM(u.concat(0, n, 0L))._(new Long(3))._("2");
         String value5 =
                 function._(1).get();
 
@@ -648,13 +536,13 @@ public class UtilsTest implements Utils {
     public void curryTest3() {
         UtilsTest u = target(this);
 
-        String value = curry(u.concat(Null.type(String.class), Null.type(String.class), Null.type(String.class)))._("A")._("B")._("C").get();
+        String value = curryM(u.concat(Null.type(String.class), Null.type(String.class), Null.type(String.class)))._("A")._("B")._("C").get();
 
         String expected = "ABC";
         Assert.assertEquals(expected, value);
 
         CurryFunction<String> function =
-                curry(u.concat(n, n, n))._("A")._("B");
+                curryM(u.concat(n, n, n))._("A")._("B");
         String value2 =
                 function._("C").get();
         String value22 =
@@ -667,7 +555,7 @@ public class UtilsTest implements Utils {
         Assert.assertEquals("ABE", value222);
 
         function =
-                curry(u.concat(0, n, 0L))._(new Long(3))._("2");
+                curryM(u.concat(0, n, 0L))._(new Long(3))._("2");
         String value5 =
                 function._(1).get();
 
@@ -824,44 +712,150 @@ public class UtilsTest implements Utils {
         }
     }
     
-    private class SendFunction implements MRFunction<Socket, Boolean> {
-        
-        private String text = "";
-        
-        public SendFunction text(String text) {
-            this.text = text;
-            return this;
-        }
+//    private class SendFunction implements MRFunction<Socket, Boolean> {
+//
+//        private String text = "";
+//
+//        public SendFunction text(String text) {
+//            this.text = text;
+//            return this;
+//        }
+//
+//        @Override
+//        public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+//
+//            Boolean result = (Boolean) monad.unit().get();
+//            if (result) {
+//                monad.get().send(text);
+//            }
+//            return new Tuple<UtilsTest.Socket, Boolean>(monad.get(), Boolean.TRUE);
+//        }
+//    }
+//
+//    private class SendFunction2 implements MRFunction<BadSocket, Boolean> {
+//
+//        private String text = "";
+//
+//        public SendFunction2 text(String text) {
+//            this.text = text;
+//            return this;
+//        }
+//
+//        @Override
+//        public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
+//            Boolean result = false;
+//            if (!monad.error().isDefined()) {
+//                result = monad.get().send(text);
+//                if (!result)
+//                    monad.error("Send error");
+//            }
+//            return new Tuple<UtilsTest.BadSocket, Boolean>(monad.get(), result);
+//        }
+//    }
 
-        @Override
-        public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
-            
-            Boolean result = (Boolean) monad.unit().get();
-            if (result) {
-                monad.get().send(text);
-            }
-            return new Tuple<UtilsTest.Socket, Boolean>(monad.get(), Boolean.TRUE);
-        }
-    }
-    
-    private class SendFunction2 implements MRFunction<BadSocket, Boolean> {
-        
-        private String text = "";
-                
-        public SendFunction2 text(String text) {
-            this.text = text;
-            return this;
-        }
-
-        @Override
-        public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
-            Boolean result = false;
-            if (!monad.error().isDefined()) {
-                result = monad.get().send(text);
-                if (!result)
-                    monad.error("Send error");
-            }
-            return new Tuple<UtilsTest.BadSocket, Boolean>(monad.get(), result);
-        }
-    }
+//    @Test
+//    public void testMonads() {
+//        String base = "Hello !";
+//
+//        Monad<String, Object> val = Monadic.monad(base);
+//
+//        MRFunction<String, String> t = new MRFunction<String, String>() {
+//
+//            @Override
+//            public Tuple<String, String> apply(Monad<String, ?> monad) {
+//                String result = monad.get().toUpperCase();
+//                return new Tuple<String, String>(result, result);
+//            }
+//        };
+//
+//        MRFunction<String, String> t2 = new MRFunction<String, String>() {
+//
+//            @Override
+//            public Tuple<String, String> apply(Monad<String, ?> monad) {
+//                String result = monad.get() + monad.get();
+//                return new Tuple<String, String>(result, result);
+//            }
+//        };
+//
+//        String ret1 = val.bind(t).unit().getOrElse("fail");
+//        String ret2 = val.bind(t2).unit().getOrElse("fail");
+//        String ret3 = val.bind(t).bind(t2).unit().getOrElse("fail");
+//        Assert.assertEquals(ret1, base.toUpperCase());
+//        Assert.assertEquals(ret2, base + base);
+//        Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
+//
+//        MRFunction<Socket, Boolean> connect = new MRFunction<Socket, Boolean>() {
+//
+//            @Override
+//            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+//                Boolean result = false;
+//                if (!monad.error().isDefined()) {
+//                    result = monad.get().connect();
+//                    if (!result)
+//                        monad.error("Connection  denied");
+//                }
+//                return new Tuple<Socket, Boolean>(monad.get(), result);
+//            }
+//        };
+//
+//        MRFunction<Socket, Boolean> disconnect = new MRFunction<Socket, Boolean>() {
+//
+//            @Override
+//            public Tuple<Socket, Boolean> apply(Monad<Socket, ?> monad) {
+//                Boolean result = false;
+//                if (!monad.error().isDefined()) {
+//                    result = monad.get().disconnect();
+//                    if (!result)
+//                        monad.error("Disconnection error");
+//                }
+//                return new Tuple<Socket, Boolean>(monad.get(), result);
+//            }
+//        };
+//
+//        MRFunction<BadSocket, Boolean> connect2 = new MRFunction<BadSocket, Boolean>() {
+//
+//            @Override
+//            public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
+//                Boolean result = false;
+//                if (!monad.error().isDefined()) {
+//                    result = monad.get().connect();
+//                    if (!result)
+//                        monad.error("Connection error");
+//                }
+//                return new Tuple<BadSocket, Boolean>(monad.get(), result);
+//            }
+//        };
+//
+//        MRFunction<BadSocket, Boolean> disconnect2 = new MRFunction<BadSocket, Boolean>() {
+//
+//            @Override
+//            public Tuple<BadSocket, Boolean> apply(Monad<BadSocket, ?> monad) {
+//                Boolean result = false;
+//                if (!monad.error().isDefined()) {
+//                    result = monad.get().disconnect();
+//                    if (!result)
+//                        monad.error("Disconnection error");
+//                }
+//                return new Tuple<BadSocket, Boolean>(monad.get(), result);
+//            }
+//        };
+//
+//        SendFunction send = new SendFunction();
+//        SendFunction2 send2 = new SendFunction2();
+//        Monad<Socket, Object> socket = Monadic.monad(new Socket());
+//        Monad<BadSocket, Object> socket2 = Monadic.monad(new BadSocket());
+//
+//        socket.bind(connect).bind(send.text("Hello")).bind(disconnect);
+//        socket2.bind(connect2).bind(send2.text("Hello")).bind(disconnect2);
+//
+//        Assert.assertTrue(socket.isDefined());
+//
+//        Assert.assertTrue(socket.get().connectCalled);
+//        Assert.assertTrue(socket.get().sendCalled);
+//        Assert.assertTrue(socket.get().disconnectCalled);
+//
+//        Assert.assertTrue(socket2.get().connectCalled);
+//        Assert.assertFalse(socket2.get().sendCalled);
+//        Assert.assertFalse(socket2.get().disconnectCalled);
+//    }
 }
