@@ -53,6 +53,82 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(ret1, base.toUpperCase());
         Assert.assertEquals(ret2, base + base);
         Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
+
+        Function<Socket, Socket> connect = new Function<Socket, Socket>() {
+            @Override
+            public Socket apply(Socket socket) {
+                if (!socket.connect()) {
+                    throw new RuntimeException("socket error");
+                }
+                return socket;
+            }
+        };
+
+        Function<Socket, Socket> disconnect = new Function<Socket, Socket>() {
+            @Override
+            public Socket apply(Socket socket) {
+                if (!socket.disconnect()) {
+                    throw new RuntimeException("socket error");
+                }
+                return socket;
+            }
+        };
+
+        Function<BadSocket, BadSocket> connect2 = new Function<BadSocket, BadSocket>() {
+            @Override
+            public BadSocket apply(BadSocket socket) {
+                if (!socket.connect()) {
+                    throw new RuntimeException("socket error");
+                }
+                return socket;
+            }
+        };
+
+        Function<BadSocket, BadSocket> disconnect2 = new Function<BadSocket, BadSocket>() {
+            @Override
+            public BadSocket apply(BadSocket socket) {
+                if (!socket.disconnect()) {
+                    throw new RuntimeException("socket error");
+                }
+                return socket;
+            }
+        };
+
+        Function<Socket, Socket> send = new Function<Socket, Socket>() {
+            @Override
+            public Socket apply(Socket socket) {
+                if (!socket.send("Hello")) {
+                    throw new RuntimeException("socket error");
+                }
+                return socket;
+            }
+        };
+
+        Function<BadSocket, BadSocket> send2 = new Function<BadSocket, BadSocket>() {
+            @Override
+            public BadSocket apply(BadSocket socket) {
+                if (!socket.send("Hello")) {
+                    throw new RuntimeException("socket error");
+                }
+                return socket;
+            }
+        };
+
+        Option<Socket> socket = Option.some(new Socket());
+        Option<BadSocket> socket2 = Option.some(new BadSocket());
+
+        socket.map(connect).map(send).map(disconnect);
+        socket2.map(connect2).map(send2).map(disconnect2);
+
+        Assert.assertTrue(socket.isDefined());
+
+        Assert.assertTrue(socket.get().connectCalled);
+        Assert.assertTrue(socket.get().sendCalled);
+        Assert.assertTrue(socket.get().disconnectCalled);
+
+        Assert.assertTrue(socket2.get().connectCalled);
+        Assert.assertFalse(socket2.get().sendCalled);
+        Assert.assertFalse(socket2.get().disconnectCalled);
     }
     
     @Test
