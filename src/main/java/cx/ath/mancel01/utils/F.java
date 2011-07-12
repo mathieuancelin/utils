@@ -433,15 +433,43 @@ public final class F {
             this.right = right;
         }
 
-        public static <A, B> Either<A, B> left(A value) {
+        public static <A, B> Either<A, B> eitheLeft(A value) {
             return new Either<A, B>(Option.maybe(value), (Option<B>) Option.none());
         }
 
-        public static <A, B> Either<A, B> right(B value) {
+        public static <A, B> Either<A, B> eitherRight(B value) {
             return new Either<A, B>((Option<A>) Option.none(), Option.maybe(value));
         }
 
-        public <X> Option<X> fold(Function<A, X> fa, Function<B,X> fb) {
+        public <A, B> Either<A, B> left(A value) {
+            if (value != null) {
+                return new Either<A, B>(Option.maybe(value), (Option<B>) Option.none());
+            }
+            return new Either<A, B>(left, right);
+        }
+
+        public <A, B> Either<A, B> right(B value) {
+            if (value != null) {
+                return new Either<A, B>((Option<A>) Option.none(), Option.maybe(value));
+            }
+            return new Either<A, B>(left, right);
+        }
+
+        public <A, B> Either<A, B> left(Option<A> value) {
+            if (value.isDefined()) {
+                return new Either<A, B>(value, (Option<B>) Option.none());
+            }
+            return new Either<A, B>(left, right);
+        }
+
+        public <A, B> Either<A, B> right(Option<B> value) {
+            if (value.isDefined()) {
+                return new Either<A, B>((Option<A>) Option.none(), value);
+            }
+            return new Either<A, B>(left, right);
+        }
+
+        public <X> Option<X> fold(Function<A, X> fa, Function<B, X> fb) {
             if (isLeft()) {
                 return Option.maybe(fa.apply(left.get()));
             } else if (isRight()) {
@@ -449,6 +477,25 @@ public final class F {
             } else {
                 return (Option<X>) Option.none();
             }
+        }
+
+        public <X> Option<X> fold(Callable<X> fa, Callable<X> fb) {
+            if (isLeft()) {
+                return Option.maybe(fa.apply());
+            } else if (isRight()) {
+                return Option.maybe(fb.apply());
+            } else {
+                return (Option<X>) Option.none();
+            }
+        }
+
+        public <X> Option<X> fold(Action<A> fa, Action<B> fb) {
+            if (isLeft()) {
+                fa.apply(left.get());
+            } else if (isRight()) {
+                fb.apply(right.get());
+            }
+            return (Option<X>) Option.none();
         }
 
         public boolean isLeft() {
