@@ -423,17 +423,32 @@ public final class F {
         final public Option<A> left;
         final public Option<B> right;
 
+        private Either(A left, B right) {
+            this.left = Option.maybe(left);
+            this.right = Option.maybe(right);
+        }
+
         private Either(Option<A> left, Option<B> right) {
             this.left = left;
             this.right = right;
         }
 
         public static <A, B> Either<A, B> left(A value) {
-            return new Either<A, B>(Option.some(value), (Option<B>) Option.none());
+            return new Either<A, B>(Option.maybe(value), (Option<B>) Option.none());
         }
 
         public static <A, B> Either<A, B> right(B value) {
-            return new Either<A, B>((Option<A>) Option.none(), Option.some(value));
+            return new Either<A, B>((Option<A>) Option.none(), Option.maybe(value));
+        }
+
+        public <X> Option<X> fold(Function<A, X> fa, Function<B,X> fb) {
+            if (isLeft()) {
+                return Option.maybe(fa.apply(left.get()));
+            } else if (isRight()) {
+                return Option.maybe(fb.apply(right.get()));
+            } else {
+                return (Option<X>) Option.none();
+            }
         }
 
         public boolean isLeft() {

@@ -14,7 +14,37 @@ import static cx.ath.mancel01.utils.M.*;
 import static cx.ath.mancel01.utils.Y.*;
 
 public class UtilsTest implements Utils {
-    
+
+    @Test
+    public void testEither() {
+        Function<String, Void> success = new Function<String, Void>() {
+            @Override
+            public Void apply(String s) {
+                System.out.println("success for " + s);
+                return F.VOID;
+            }
+        };
+
+        Function<Throwable, Void> failure = new Function<Throwable, Void>() {
+            @Override
+            public Void apply(Throwable t) {
+                System.out.println("failure with " + t);
+                return F.VOID;
+            }
+        };
+
+        upperCase("mathieu").fold(failure, success);
+        upperCase(null).fold(failure, success);
+    }
+
+    public static Either<Throwable, String> upperCase(String value) {
+        try {
+            return Either.right(value.toUpperCase());
+        } catch (Throwable t) {
+            return Either.left(t);
+        }
+    }
+
     @Test
     public void testSimpleCurry() {        
         F2<String, String, String> naming = new F2<String, String, String>() {
