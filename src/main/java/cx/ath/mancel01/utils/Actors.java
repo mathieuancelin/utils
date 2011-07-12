@@ -296,7 +296,7 @@ public final class Actors {
         public final void send(Object msg) {
             if (msg.getClass().equals(Broadcast.class)) {
                 Broadcast b = (Broadcast) msg;
-                broadcast(b.message, b.from.getOrElse(null));
+                broadcast(b.message, b.from.getOrNull());
             } else {
                 chooseAndSend(msg, null);
             }

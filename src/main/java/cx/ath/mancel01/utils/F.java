@@ -19,6 +19,7 @@ package cx.ath.mancel01.utils;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -36,6 +37,11 @@ public final class F {
     public static final Void VOID = null;
 
     private F() {}
+
+    public static interface Callable<T> {
+
+        T apply();
+    }
 
     public static interface Action<T> {
 
@@ -80,9 +86,33 @@ public final class F {
         
         public abstract T get();
 
-        public abstract Option<T> orElse(T value);
+        public Option<T> orElse(T value) {
+            return isEmpty() ? Option.maybe(value) : this;
+        }
         
-        public abstract T getOrElse(T value);
+        public T getOrElse(T value) {
+            return isEmpty() ? value : get();
+        }
+
+        public T getOrElse(Function<Void, T> function) {
+            return isEmpty() ? function.apply(VOID) : get();
+        }
+
+        public T getOrElse(Callable<T> function) {
+            return isEmpty() ? function.apply() : get();
+        }
+
+        public T getOrNull() {
+            return isEmpty() ? null : get();
+        }
+
+        public <X> Either<X, T> toRight(X left) {
+             return new Either<X, T>(Option.maybe(left), this);
+        }
+
+        public <X> Either<T, X> toLeft(X right) {
+             return new Either<T, X>(this, Option.maybe(right));
+        }
 
         public static <T> None<T> none() {
             return (None<T>) (Object) none;
@@ -120,18 +150,8 @@ public final class F {
         }
 
         @Override
-        public T getOrElse(T value) {
-            return value;
-        }
-
-        @Override
         public boolean isEmpty() {
             return true;
-        }
-
-        @Override
-        public Option<T> orElse(T value) {
-            return Option.some(value);
         }
 
         @Override
@@ -194,18 +214,8 @@ public final class F {
         }
 
         @Override
-        public T getOrElse(T value) {
-            return this.value;
-        }
-
-        @Override
         public boolean isEmpty() {
             return false;
-        }
-
-        @Override
-        public Option<T> orElse(T value) {
-            return this;
         }
 
         @Override
@@ -290,15 +300,6 @@ public final class F {
         }
 
         @Override
-        public T getOrElse(T value) {
-            if (input == null) {
-                return value;
-            } else {
-                return input;
-            }
-        }
-
-        @Override
         public Iterator<T> iterator() {
             if (input == null) {
                 return Collections.<T>emptyList().iterator();
@@ -315,15 +316,6 @@ public final class F {
         @Override
         public boolean isEmpty() {
             return !isDefined();
-        }
-
-        @Override
-        public Option<T> orElse(T value) {
-            if (isDefined()) {
-                return this;
-            } else {
-                return Option.some(value);
-            }
         }
  
         @Override
@@ -437,11 +429,11 @@ public final class F {
         }
 
         public static <A, B> Either<A, B> left(A value) {
-            return new Either(Option.some(value), Option.none());
+            return new Either<A, B>(Option.some(value), (Option<B>) Option.none());
         }
 
         public static <A, B> Either<A, B> right(B value) {
-            return new Either(Option.none(), Option.some(value));
+            return new Either<A, B>((Option<A>) Option.none(), Option.some(value));
         }
 
         public boolean isLeft() {
@@ -453,7 +445,7 @@ public final class F {
         }
 
         public Either<B, A> swap() {
-            return new Either<B, A>(right,left);
+            return new Either<B, A>(right, left);
         }
 
         @Override
