@@ -15,7 +15,7 @@ public class ActorTest {
     
     private static CountDownLatch userlatch = new CountDownLatch(12);
     
-    @Test @Ignore
+    @Test
     public void testChatRoom() throws Exception {
         User user1 = new User("maurice");
         User user2 = new User("john");
@@ -33,15 +33,18 @@ public class ActorTest {
         user3.send("Hello user1!", room);
         Thread.sleep(200);
         room.send(new Unsuscribe(user1));
+        Thread.sleep(200);
         room.send(new Unsuscribe(user2));
-        room.send(new Unsuscribe(user3)); 
+        Thread.sleep(200);
+        room.send(new Unsuscribe(user3));
+        Thread.sleep(200);
         userlatch.await();
         room.stopSession();
         room.stopActor();
         Actors.shutdownAll();
     }
     
-    @Test @Ignore
+    @Test
     public void testPingPong() throws Exception {
         Pong pong = new Pong();
         Ping ping = new Ping(pong);

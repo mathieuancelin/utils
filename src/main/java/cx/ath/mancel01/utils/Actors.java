@@ -62,7 +62,7 @@ public final class Actors {
     
     private static HttpServer remotingServer;
     
-    private static final ExecutorService remotingServerExecutor = Executors.newCachedThreadPool();
+    private static ExecutorService remotingServerExecutor = Executors.newCachedThreadPool();
 
     private static ActorRef getActor(String name) {
         return actors.get(name);
@@ -81,7 +81,12 @@ public final class Actors {
     }
 
     public static void shutdownAll() {
+        try {
+            Thread.sleep(50);
+        } catch (Throwable t) {}
+        Actor.executor.shutdown();
         Actor.executor.shutdownNow();
+        Actor.executor = Executors.newCachedThreadPool();
     }
 
     public static void startRemoting(String host, int port) {
