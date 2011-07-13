@@ -34,14 +34,20 @@ public final class F {
 
     final static None<Object> none = new None<Object>();
 
-    public static final Void VOID = null;
-
     private F() {}
+
+    public static class Unit {
+        private static final Unit instance = new Unit();
+        private Unit() {}
+        public static Unit unit() { return instance; }
+    }
 
     public static interface Callable<T> {
 
         T apply();
     }
+
+    public static interface SimpleCallable extends Callable<Unit> {}
 
     public static interface Action<T> {
 
@@ -94,8 +100,8 @@ public final class F {
             return isEmpty() ? value : get();
         }
 
-        public T getOrElse(Function<Void, T> function) {
-            return isEmpty() ? function.apply(VOID) : get();
+        public T getOrElse(Function<Unit, T> function) {
+            return isEmpty() ? function.apply(Unit.unit()) : get();
         }
 
         public T getOrElse(Callable<T> function) {
@@ -112,6 +118,70 @@ public final class F {
 
         public <X> Either<T, X> toLeft(X right) {
              return new Either<T, X>(this, Option.maybe(right));
+        }
+
+        @Override
+        public <R> Option<R> map(Function<T, R> function) {
+            if (isDefined()) {
+                return Option.maybe(function.apply(get()));
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(Action<T> function) {
+            if (isDefined()) {
+                function.apply(get());
+                return Option.maybe(get());
+            }
+            return Option.none();
+        }
+
+        @Override
+        public <R> Option<R> map(CheckedFunction<T, R> function) {
+            if (isDefined()) {
+                try {
+                    return Option.maybe(function.apply(get()));
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> map(CheckedAction<T> function) {
+            if (isDefined()) {
+                try {
+                    function.apply(get());
+                    return Option.maybe(get());
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> bind(Action<Option<T>> action) {
+            if (isDefined()) {
+                action.apply(this);
+                return this;
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> bind(CheckedAction<Option<T>> action) {
+           if (isDefined()) {
+                try {
+                    action.apply(this);
+                    return this;
+                } catch (Throwable t) {
+                    return this;
+                }
+            }
+            return Option.none();
         }
 
         public static <T> None<T> none() {
@@ -153,36 +223,6 @@ public final class F {
         public boolean isEmpty() {
             return true;
         }
-
-        @Override
-        public <R> Option<R> map(Function<T, R> function) {
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> map(Action<T> function) {
-            return Option.none();
-        }
-        
-        @Override
-        public <R> Option<R> map(CheckedFunction<T, R> function) {
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> map(CheckedAction<T> function) {
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> bind(Action<Option<T>> action) {
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> bind(CheckedAction<Option<T>> action) {
-            return Option.none();
-        }
     }
 
     public static class Some<T> extends Option<T> {
@@ -216,62 +256,6 @@ public final class F {
         @Override
         public boolean isEmpty() {
             return false;
-        }
-
-        @Override
-        public <R> Option<R> map(Function<T, R> function) {
-            try {
-                return Option.maybe(function.apply(get()));
-            } catch (Throwable t) {
-                return Option.none();
-            }
-        }
-
-        @Override
-        public Option<T> map(Action<T> function) {
-            try {
-                function.apply(get());
-                return Option.maybe(get());
-            } catch (Throwable t) {
-                return Option.none();
-            }
-        }
-        
-        @Override
-        public <R> Option<R> map(CheckedFunction<T, R> function) {
-            try {
-                return Option.maybe(function.apply(get()));
-            } catch (Throwable t) {
-                return Option.none();
-            }
-        }
-
-        @Override
-        public Option<T> map(CheckedAction<T> function) {
-            try {
-                function.apply(get());
-                return Option.maybe(get());
-            } catch (Throwable t) {
-                return Option.none();
-            }
-        }
-
-        @Override
-        public Option<T> bind(Action<Option<T>> action) {
-            try {
-                action.apply(this);
-            } catch (Throwable t) {
-            }
-            return this;
-        }
-
-        @Override
-        public Option<T> bind(CheckedAction<Option<T>> action) {
-            try {
-                action.apply(this);
-            } catch (Throwable t) {
-            }
-            return this;
         }
     }
     
@@ -317,82 +301,6 @@ public final class F {
         public boolean isEmpty() {
             return !isDefined();
         }
- 
-        @Override
-        public <R> Option<R> map(Function<T, R> function) {
-            if (isDefined()) {
-                try {
-                    return Option.maybe(function.apply(get()));
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> map(Action<T> function) {
-            if (isDefined()) {
-                try {
-                    function.apply(get());
-                    return Option.maybe(get());
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
-        
-        @Override
-        public <R> Option<R> map(CheckedFunction<T, R> function) {
-            if (isDefined()) {
-                try {
-                    return Option.maybe(function.apply(get()));
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> map(CheckedAction<T> function) {
-            if (isDefined()) {
-                try {
-                    function.apply(get());
-                    return Option.maybe(get());
-                } catch (Throwable t) {
-                    return Option.none();
-                }
-            }
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> bind(Action<Option<T>> action) {
-            if (isDefined()) {
-                try {
-                    action.apply(this);
-                    return this;
-                } catch (Throwable t) {
-                    return this;
-                }
-            }
-            return Option.none();
-        }
-
-        @Override
-        public Option<T> bind(CheckedAction<Option<T>> action) {
-           if (isDefined()) {
-                try {
-                    action.apply(this);
-                    return this;
-                } catch (Throwable t) {
-                    return this;
-                }
-            }
-            return Option.none();
-        }
     }
 
     public static class Any<T> extends Some<T> {
@@ -433,7 +341,7 @@ public final class F {
             this.right = right;
         }
 
-        public static <A, B> Either<A, B> eitheLeft(A value) {
+        public static <A, B> Either<A, B> eitherLeft(A value) {
             return new Either<A, B>(Option.maybe(value), (Option<B>) Option.none());
         }
 
@@ -445,28 +353,28 @@ public final class F {
             if (value != null) {
                 return new Either<A, B>(Option.maybe(value), (Option<B>) Option.none());
             }
-            return new Either<A, B>(left, right);
+            return new Either(left, right);
         }
 
         public <A, B> Either<A, B> right(B value) {
             if (value != null) {
                 return new Either<A, B>((Option<A>) Option.none(), Option.maybe(value));
             }
-            return new Either<A, B>(left, right);
+            return new Either(left, right);
         }
 
         public <A, B> Either<A, B> left(Option<A> value) {
             if (value.isDefined()) {
                 return new Either<A, B>(value, (Option<B>) Option.none());
             }
-            return new Either<A, B>(left, right);
+            return new Either(left, right);
         }
 
         public <A, B> Either<A, B> right(Option<B> value) {
             if (value.isDefined()) {
                 return new Either<A, B>((Option<A>) Option.none(), value);
             }
-            return new Either<A, B>(left, right);
+            return new Either(left, right);
         }
 
         public <X> Option<X> fold(Function<A, X> fa, Function<B, X> fb) {
@@ -489,13 +397,13 @@ public final class F {
             }
         }
 
-        public <X> Option<X> fold(Action<A> fa, Action<B> fb) {
+        public <X> Either<A, B> fold(Action<A> fa, Action<B> fb) {
             if (isLeft()) {
                 fa.apply(left.get());
             } else if (isRight()) {
                 fb.apply(right.get());
             }
-            return (Option<X>) Option.none();
+            return new Either<A, B>(left, right);
         }
 
         public boolean isLeft() {

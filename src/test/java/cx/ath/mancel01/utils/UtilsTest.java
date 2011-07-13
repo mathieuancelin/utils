@@ -9,40 +9,57 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static cx.ath.mancel01.utils.F.*;
+import static cx.ath.mancel01.utils.F.Unit.*;
+import static cx.ath.mancel01.utils.F.Either.*;
 import static cx.ath.mancel01.utils.C.*;
 import static cx.ath.mancel01.utils.M.*;
 import static cx.ath.mancel01.utils.Y.*;
 
 public class UtilsTest implements Utils {
 
-    @Test
-    public void testEither() {
-        Function<String, Void> success = new Function<String, Void>() {
+    @Test(expected = java.lang.AssertionError.class)
+    public void testMapAndBind() {
+        Function<String, Unit> func = new Function<String, Unit>() {
             @Override
-            public Void apply(String s) {
-                System.out.println("success for " + s);
-                return F.VOID;
+            public Unit apply(String s) {
+                Assert.fail("failure");
+                return unit();
             }
         };
-
-        Function<Throwable, Void> failure = new Function<Throwable, Void>() {
-            @Override
-            public Void apply(Throwable t) {
-                System.out.println("failure with " + t);
-                return F.VOID;
-            }
-        };
-
-        upperCase("mathieu").fold(failure, success);
-        upperCase(null).fold(failure, success);
+        Option.some("mathieu").map(func);
     }
 
-    public static Either<Throwable, String> upperCase(String value) {
-        try {
-            return Either.right(value.toUpperCase());
-        } catch (Throwable t) {
-            return Either.left(t);
-        }
+    @Test
+    public void testEither() {
+        Function<String, Unit> success = new Function<String, Unit>() {
+            @Override
+            public Unit apply(String s) {
+                System.out.println("success for " + s);
+                return unit();
+            }
+        };
+
+        Function<Throwable, Unit> failure = new Function<Throwable, Unit>() {
+            @Override
+            public Unit apply(Throwable t) {
+                System.out.println("failure with " + t);
+                return unit();
+            }
+        };
+
+        Function<String, Either<Throwable, String>> uppercase = new Function<String, Either<Throwable, String>>() {
+            @Override
+            public Either<Throwable, String> apply(String value) {
+                try {
+                    return eitherRight(value.toUpperCase());
+                } catch (Throwable t) {
+                    return eitherLeft(t);
+                }
+            }
+        };
+
+        uppercase.apply("mathieu").fold(failure, success);
+        uppercase.apply(null).fold(failure, success);
     }
 
     @Test
@@ -84,54 +101,54 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(ret2, base + base);
         Assert.assertEquals(ret3, base.toUpperCase() + base.toUpperCase());
 
-        Action<Socket> connect = new Action<Socket>() {
+        CheckedAction<Socket> connect = new CheckedAction<Socket>() {
             @Override
-            public void apply(Socket socket) {
+            public void apply(Socket socket) throws Throwable {
                 if (!socket.connect()) {
                     throw new RuntimeException("socket error");
                 }
             }
         };
 
-        Action<Socket> disconnect = new Action<Socket>() {
+        CheckedAction<Socket> disconnect = new CheckedAction<Socket>() {
             @Override
-            public void apply(Socket socket) {
+            public void apply(Socket socket) throws Throwable {
                 if (!socket.disconnect()) {
                     throw new RuntimeException("socket error");
                 }
             }
         };
 
-        Action<BadSocket> connect2 = new Action<BadSocket>() {
+        CheckedAction<BadSocket> connect2 = new CheckedAction<BadSocket>() {
             @Override
-            public void apply(BadSocket socket) {
+            public void apply(BadSocket socket) throws Throwable {
                 if (!socket.connect()) {
                     throw new RuntimeException("socket error");
                 }
             }
         };
 
-        Action<BadSocket> disconnect2 = new Action<BadSocket>() {
+        CheckedAction<BadSocket> disconnect2 = new CheckedAction<BadSocket>() {
             @Override
-            public void apply(BadSocket socket) {
+            public void apply(BadSocket socket) throws Throwable {
                 if (!socket.disconnect()) {
                     throw new RuntimeException("socket error");
                 }
             }
         };
 
-        Action<Socket> send = new Action<Socket>() {
+        CheckedAction<Socket> send = new CheckedAction<Socket>() {
             @Override
-            public void apply(Socket socket) {
+            public void apply(Socket socket) throws Throwable {
                 if (!socket.send("Hello")) {
                     throw new RuntimeException("socket error");
                 }
             }
         };
 
-        Action<BadSocket> send2 = new Action<BadSocket>() {
+        CheckedAction<BadSocket> send2 = new CheckedAction<BadSocket>() {
             @Override
-            public void apply(BadSocket socket) {
+            public void apply(BadSocket socket) throws Throwable {
                 if (!socket.send("Hello")) {
                     throw new RuntimeException("socket error");
                 }
