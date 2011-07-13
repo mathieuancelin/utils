@@ -2,6 +2,7 @@ package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.Action;
 import cx.ath.mancel01.utils.Actors.Actor;
+import org.junit.Ignore;
 import org.junit.Test;
 import java.util.Map;
 import java.util.HashMap;
@@ -14,7 +15,7 @@ public class ActorTest {
     
     private static CountDownLatch userlatch = new CountDownLatch(12);
     
-    //@Test
+    @Test @Ignore
     public void testChatRoom() throws Exception {
         User user1 = new User("maurice");
         User user2 = new User("john");
@@ -40,7 +41,7 @@ public class ActorTest {
         Actors.shutdownAll();
     }
     
-    //@Test
+    @Test @Ignore
     public void testPingPong() throws Exception {
         Pong pong = new Pong();
         Ping ping = new Ping(pong);
