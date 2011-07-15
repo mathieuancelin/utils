@@ -19,7 +19,6 @@ package cx.ath.mancel01.utils;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.lang.reflect.Constructor;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -46,8 +45,15 @@ public final class F {
 
         T apply();
     }
+    
+    public static interface CheckedCallable<T> {
+
+        T apply() throws Throwable;
+    }
 
     public static interface SimpleCallable extends Callable<Unit> {}
+    
+    public static interface SimpleCheckedCallable extends CheckedCallable<Unit> {}
 
     public static interface Action<T> {
 
@@ -78,6 +84,14 @@ public final class F {
         <R> Option<R> map(CheckedFunction<T, R> function);
 
         Option<T> map(CheckedAction<T> function);
+        
+        Option<T> flatMap(Callable<Option<T>> action);
+
+        Option<T> flatMap(CheckedCallable<Option<T>> action);
+
+        Option<T> flatMap(Function<T, Option<T>> action);
+
+        Option<T> flatMap(CheckedFunction<T, Option<T>> action);
 
         Option<T> bind(Action<Option<T>> action);
 
@@ -111,13 +125,43 @@ public final class F {
         public T getOrNull() {
             return isEmpty() ? null : get();
         }
+        
+        public Option<T> filter(Function<T, Boolean> predicate) {
+            if (isDefined()) {
+                if (predicate.apply(get())) {
+                    return this;
+                } else {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+        
+        public Option<T> filterNot(Function<T, Boolean> predicate) {
+            if (isDefined()) {
+                if (!predicate.apply(get())) {
+                    return this;
+                } else {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
 
         public <X> Either<X, T> toRight(X left) {
-             return new Either<X, T>(Option.maybe(left), this);
+            if (isDefined()) {
+                return Either.eitherRight(get());
+            } else {
+                return Either.eitherLeft(left);
+            }
         }
 
         public <X> Either<T, X> toLeft(X right) {
-             return new Either<T, X>(this, Option.maybe(right));
+             if (isDefined()) {
+                return Either.eitherLeft(get());
+            } else {
+                return Either.eitherRight(right);
+            }
         }
 
         @Override
@@ -177,6 +221,46 @@ public final class F {
                 try {
                     action.apply(this);
                     return this;
+                } catch (Throwable t) {
+                    return this;
+                }
+            }
+            return Option.none();
+        }
+        
+        @Override
+        public Option<T> flatMap(Callable<Option<T>> action) {
+            if (isDefined()) {
+                return action.apply();
+            }
+            return Option.none();
+        }
+        
+        @Override
+        public Option<T> flatMap(CheckedCallable<Option<T>> action) {
+           if (isDefined()) {
+                try {
+                    return action.apply();
+                } catch (Throwable t) {
+                    return this;
+                }
+            }
+            return Option.none();
+        }
+        
+        @Override
+        public Option<T> flatMap(Function<T, Option<T>> action) {
+            if (isDefined()) {
+                return action.apply(get());
+            }
+            return Option.none();
+        }
+
+        @Override
+        public Option<T> flatMap(CheckedFunction<T, Option<T>> action) {
+           if (isDefined()) {
+                try {
+                    return action.apply(get());
                 } catch (Throwable t) {
                     return this;
                 }
@@ -328,51 +412,46 @@ public final class F {
 
     public static class Either<A, B> {
 
-        final public Option<A> left;
-        final public Option<B> right;
+        final public Left<A, B> left;
+        final public Right<B, A> right;
 
         private Either(A left, B right) {
-            this.left = Option.maybe(left);
-            this.right = Option.maybe(right);
-        }
-
-        private Either(Option<A> left, Option<B> right) {
-            this.left = left;
-            this.right = right;
+            this.left = new Left<A, B>(left, this);
+            this.right = new Right<B, A>(right, this);
         }
 
         public static <A, B> Either<A, B> eitherLeft(A value) {
-            return new Either<A, B>(Option.maybe(value), (Option<B>) Option.none());
+            return new Either<A, B>(value, null);
         }
 
         public static <A, B> Either<A, B> eitherRight(B value) {
-            return new Either<A, B>((Option<A>) Option.none(), Option.maybe(value));
+            return new Either<A, B>(null, value);
         }
 
         public <A, B> Either<A, B> left(A value) {
             if (value != null) {
-                return new Either<A, B>(Option.maybe(value), (Option<B>) Option.none());
+                return new Either<A, B>(value, null);
             }
             return new Either(left, right);
         }
 
         public <A, B> Either<A, B> right(B value) {
             if (value != null) {
-                return new Either<A, B>((Option<A>) Option.none(), Option.maybe(value));
+                return new Either<A, B>(null, value);
             }
             return new Either(left, right);
         }
 
         public <A, B> Either<A, B> left(Option<A> value) {
             if (value.isDefined()) {
-                return new Either<A, B>(value, (Option<B>) Option.none());
+                return new Either<A, B>(value.get(), null);
             }
             return new Either(left, right);
         }
 
         public <A, B> Either<A, B> right(Option<B> value) {
             if (value.isDefined()) {
-                return new Either<A, B>((Option<A>) Option.none(), value);
+                return new Either<A, B>(null, value.get());
             }
             return new Either(left, right);
         }
@@ -400,10 +479,13 @@ public final class F {
         public <X> Either<A, B> fold(Action<A> fa, Action<B> fb) {
             if (isLeft()) {
                 fa.apply(left.get());
+                return new Either<A, B>(left.get(), null);
             } else if (isRight()) {
                 fb.apply(right.get());
+                return new Either<A, B>(null, right.get());
+            } else {
+                return new Either<A, B>(null, null);
             }
-            return new Either<A, B>(left, right);
         }
 
         public boolean isLeft() {
@@ -415,12 +497,218 @@ public final class F {
         }
 
         public Either<B, A> swap() {
-            return new Either<B, A>(right, left);
+            A vLeft = null;
+            B vRight = null;
+            if (left.isDefined()) {
+                vLeft = left.get();
+            }
+            if (right.isDefined()) {
+                vRight = right.get();
+            }
+            return new Either<B, A>(vRight, vLeft);
         }
 
         @Override
         public String toString() {
             return "Either ( left: " + left + ", right: " + right + " )";
+        }
+    }
+    
+    public static class Left<A, B> {
+        
+        private final A input;
+        
+        public final Either<A, B> e;
+
+        Left(A value, Either<A, B> e) {
+            this.e = e;
+            this.input = value;
+        } 
+        
+        public boolean isDefined() {
+            return !(input == null);
+        }
+
+        public A get() {
+            return input;
+        }
+
+        public Iterator<A> iterator() {
+            if (input == null) {
+                return Collections.<A>emptyList().iterator();
+            } else {
+                return Collections.singletonList(input).iterator();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Left ( " + input + " )";
+        }
+
+        public boolean isEmpty() {
+            return !isDefined();
+        }
+        
+        public A getOrElse(A value) {
+            return isEmpty() ? value : get();
+        }
+
+        public A getOrElse(Function<Unit, A> function) {
+            return isEmpty() ? function.apply(Unit.unit()) : get();
+        }
+
+        public A getOrElse(Callable<A> function) {
+            return isEmpty() ? function.apply() : get();
+        }
+
+        public A getOrNull() {
+            return isEmpty() ? null : get();
+        }
+        
+        public Option<Either<A, B>> filter(Function<A, Boolean> predicate) {
+            if (isDefined()) {
+                if (predicate.apply(get())) {
+                    return Option.maybe(e);
+                } else {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+        
+        public Option<Either<A, B>> filterNot(Function<A, Boolean> predicate) {
+            if (isDefined()) {
+                if (!predicate.apply(get())) {
+                    return Option.maybe(e);
+                } else {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        public <R> Either<R, B> map(Function<A, R> function) {
+            if (isDefined()) {
+                return new Either<R, B>(function.apply(get()), null);
+            } else {
+                return new Either<R, B>(null, e.right.get());
+            }
+        }
+        
+        public <R> Either<R, B> flatMap(Callable<Either<R, B>> action) {
+            if (isDefined()) {
+                return action.apply();
+            } else {
+                return new Either<R, B>(null, e.right.get());
+            }
+        }
+        
+        public <R> Either<R, B> flatMap(Function<A, Either<R, B>> action) {
+            if (isDefined()) {
+                return action.apply(get());
+            } else {
+                return new Either<R, B>(null, e.right.get());
+            }
+        }
+    }
+    
+    public static class Right<B, A> {
+        
+        private final B input;
+        
+        public final Either<A, B> e;
+
+        Right(B value, Either<A, B> e) {
+            this.e = e;
+            this.input = value;
+        } 
+        
+        public boolean isDefined() {
+            return !(input == null);
+        }
+
+        public B get() {
+            return input;
+        }
+
+        public Iterator<B> iterator() {
+            if (input == null) {
+                return Collections.<B>emptyList().iterator();
+            } else {
+                return Collections.singletonList(input).iterator();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Left ( " + input + " )";
+        }
+
+        public boolean isEmpty() {
+            return !isDefined();
+        }
+        
+        public B getOrElse(B value) {
+            return isEmpty() ? value : get();
+        }
+
+        public B getOrElse(Function<Unit, B> function) {
+            return isEmpty() ? function.apply(Unit.unit()) : get();
+        }
+
+        public B getOrElse(Callable<B> function) {
+            return isEmpty() ? function.apply() : get();
+        }
+
+        public B getOrNull() {
+            return isEmpty() ? null : get();
+        }
+        
+        public Option<Either<A, B>> filter(Function<B, Boolean> predicate) {
+            if (isDefined()) {
+                if (predicate.apply(get())) {
+                    return Option.maybe(e);
+                } else {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+        
+        public Option<Either<A, B>> filterNot(Function<B, Boolean> predicate) {
+            if (isDefined()) {
+                if (!predicate.apply(get())) {
+                    return Option.maybe(e);
+                } else {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+
+        public <R> Either<A, R> map(Function<B, R> function) {
+            if (isDefined()) {
+                return new Either<A, R>(null, function.apply(get()));
+            } else {
+                return new Either<A, R>(e.left.get(), null);
+            }
+        }
+        
+        public <R> Either<A, R> flatMap(Callable<Either<A, R>> action) {
+            if (isDefined()) {
+                return action.apply();
+            } else {
+                return new Either<A, R>(e.left.get(), null);
+            }
+        }
+        
+        public <R> Either<A, R> flatMap(Function<B, Either<A, R>> action) {
+            if (isDefined()) {
+                return action.apply(get());
+            } else {
+                return new Either<A, R>(e.left.get(), null);
+            }
         }
     }
 
