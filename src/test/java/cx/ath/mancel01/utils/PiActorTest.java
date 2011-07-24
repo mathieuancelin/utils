@@ -1,5 +1,6 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.Actors.ActorRef;
 import cx.ath.mancel01.utils.F.Action;
 import cx.ath.mancel01.utils.Actors.Actor;
 import cx.ath.mancel01.utils.Actors.Broadcast;
@@ -87,7 +88,7 @@ public class PiActorTest {
             private double pi;
             private int nrOfResults;
             private long start;
-            private List<Actor> workers = new ArrayList<Actor>();
+            private List<ActorRef> workers = new ArrayList<ActorRef>();
             private LoadBalancer router;
 
             public Master(int nrOfWorkers, int nrOfMessages, int nrOfElements, CountDownLatch latch) {

@@ -15,7 +15,7 @@ public class ActorTest {
     
     private static CountDownLatch userlatch = new CountDownLatch(12);
     
-    @Test
+    //@Test
     public void testChatRoom() throws Exception {
         User user1 = new User("maurice");
         User user2 = new User("john");
@@ -44,7 +44,7 @@ public class ActorTest {
         Actors.shutdownAll();
     }
     
-    @Test
+    //@Test
     public void testPingPong() throws Exception {
         Pong pong = new Pong();
         Ping ping = new Ping(pong);

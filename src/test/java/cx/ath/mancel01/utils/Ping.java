@@ -22,7 +22,7 @@ public class Ping extends Actors.NamedActor {
     public void act() {
         System.out.println("starting ping ...");
         final ActorRef pongActor = Actors.remote("localhost", 8888).forName("pong");
-        pongActor.send("ping", "ping");
+        pongActor.send("ping", asRemoteURL());
         System.out.println("PING");
         loop(new Action<String>() {
             @Override
@@ -30,16 +30,17 @@ public class Ping extends Actors.NamedActor {
                 for (String value : with(caseStartsWith("pong")).match(msg)) {
                     System.out.println("PING");
                     if (ping == 0) {
-                        pongActor.send("stop");
+                        pongActor.send(new Actors.PoisonPill(), asRemoteURL());
                         System.out.println("STOP PING");
                         stopActor();
-                        Actors.stopRemoting();
                     } else {
-                        pongActor.send("ping", "ping");
+                        pongActor.send("ping", asRemoteURL());
                         ping--;
                     }
                 }
             }
         });
+        Actors.stopRemoting();
+        System.exit(0);
     }
 }

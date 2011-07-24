@@ -19,6 +19,7 @@ package cx.ath.mancel01.utils;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -98,7 +99,7 @@ public final class F {
         Option<T> bind(CheckedAction<Option<T>> action);
     }
 
-    public static abstract class Option<T> implements Iterable<T>, Monad<T> {
+    public static abstract class Option<T> implements Iterable<T>, Monad<T>, Serializable {
         
         public abstract boolean isDefined();
 
@@ -514,7 +515,7 @@ public final class F {
         }
     }
     
-    public static class Left<A, B> {
+    public static class Left<A, B> implements Iterable<A> {
         
         private final A input;
         
@@ -533,6 +534,7 @@ public final class F {
             return input;
         }
 
+        @Override
         public Iterator<A> iterator() {
             if (input == null) {
                 return Collections.<A>emptyList().iterator();
@@ -613,7 +615,7 @@ public final class F {
         }
     }
     
-    public static class Right<B, A> {
+    public static class Right<B, A> implements Iterable<B> {
         
         private final B input;
         
@@ -632,6 +634,7 @@ public final class F {
             return input;
         }
 
+        @Override
         public Iterator<B> iterator() {
             if (input == null) {
                 return Collections.<B>emptyList().iterator();

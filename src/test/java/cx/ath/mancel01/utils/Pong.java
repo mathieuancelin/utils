@@ -23,15 +23,12 @@ public class Pong extends Actors.NamedActor {
                 for (String value : with(caseStartsWith("ping")).match(msg)) {
                     System.out.println("PONG");
                     if (sender.isDefined()) {
-                        sender.get().send("pong");
+                        sender.get().send("pong", asRemoteURL());
                     }
-                }
-                for (String value : with(caseStartsWith("stop")).match(msg)) {
-                    System.out.println("STOP PONG");    
-                    stopActor();
-                    Actors.stopRemoting();
                 }
             }
         });
+        Actors.stopRemoting();
+        System.exit(0);
     }
 }

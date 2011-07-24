@@ -202,7 +202,7 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(expected, result);
     }
 
-    @Test
+    //@Test
     public void testSpeed() {
         Collection<String> values = Collections.nCopies(100001, "hello");
 
@@ -236,7 +236,7 @@ public class UtilsTest implements Utils {
         System.out.println("time par : " + (total / 10));
     }
 
-    @Test
+    //@Test
     public void testSpeed2() {
         Collection<Integer> values = new ArrayList<Integer>();
         for (int i = 0; i < 100; i++) {
