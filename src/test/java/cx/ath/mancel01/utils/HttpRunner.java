@@ -8,7 +8,7 @@ public class HttpRunner {
     public static void main(String... args) throws Exception {
         Http server = Http.createServer(new HttpCallback() {
             @Override
-            public void apply(Tuple<HttpRequest, HttpResponse> reqResp) {
+            public void apply(Tuple<Request, Response> reqResp) {
                 reqResp._2.write("<html><body><h1>Hello World! " 
                     + System.currentTimeMillis() 
                     + "</h1></body></html>", "UTF-8").end();

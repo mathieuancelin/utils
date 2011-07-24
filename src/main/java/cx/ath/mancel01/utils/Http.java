@@ -16,6 +16,7 @@
  */
 package cx.ath.mancel01.utils;
 
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import java.nio.charset.Charset;
 import java.util.List;
 import cx.ath.mancel01.utils.F.Action;
@@ -55,6 +56,13 @@ import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGT
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
+
+/**
+ * Heavily inspired of Node.JS(https://github.com/joyent/node), 
+ * and Node.x (https://github.com/purplefox/node.x).
+ * 
+ * @author mathieuancelin
+ */
 public class Http {
 
     public static Http createServer(HttpCallback handler) {
@@ -65,12 +73,20 @@ public class Http {
     private static final ExecutorService corePool = 
             Executors.newCachedThreadPool();
     private ServerBootstrap bootstrap;
-    private HttpCallback handler;
+    private Action<Tuple<Request, Response>> handler;
     
     private Map<Channel, HttpConnection> connectionMap =
             new ConcurrentHashMap<Channel, HttpConnection>();
+    
+    private Http(Action<Tuple<Request, Response>> handler) {
+        init(handler);
+    }
 
     private Http(HttpCallback handler) {
+        init(handler);
+    }
+    
+    private void init(Action<Tuple<Request, Response>> handler) {
         this.handler = handler;
         ChannelFactory factory =
                 new NioServerSocketChannelFactory(backgroundPool, corePool);
@@ -113,14 +129,13 @@ public class Http {
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
             Channel ch = e.getChannel();
             HttpConnection conn = connectionMap.get(ch);
-            if (e.getMessage() instanceof org.jboss.netty.handler.codec.http.HttpRequest) {
-                org.jboss.netty.handler.codec.http.HttpRequest request = (org.jboss.netty.handler.codec.http.HttpRequest) e.getMessage();
+            if (e.getMessage() instanceof HttpRequest) {
+                HttpRequest request = (HttpRequest) e.getMessage();
                 Map<String, String> headers = new HashMap<String, String>();
                 for (Map.Entry<String, String> h : request.getHeaders()) {
                     headers.put(h.getKey(), h.getValue());
                 }
-                HttpRequest req = new HttpRequest(request.getMethod().toString(), request.getUri(), headers);
-                
+                Request req = new Request(request.getMethod().toString(), request.getUri(), headers);
                 conn.handleRequest(req);
                 ChannelBuffer requestBody = request.getContent();
                 if (requestBody.readable()) {
@@ -162,21 +177,25 @@ public class Http {
         HttpConnection(Channel channel) {
             this.channel = channel;
         }
-        private HttpCallback httpCallback;
-        private volatile HttpRequest currentRequest;
+        private Action<Tuple<Request, Response>> httpCallback;
+        private volatile Request currentRequest;
 
         public void request(HttpCallback httpCallback) {
             this.httpCallback = httpCallback;
         }
+        
+        public void request(Action<Tuple<Request, Response>> httpCallback) {
+            this.httpCallback = httpCallback;
+        }
 
-        void handleRequest(HttpRequest req) {
+        void handleRequest(Request req) {
             try {
                 this.currentRequest = req;
                 if (httpCallback != null) {
                     httpCallback.apply(
-                        new Tuple<HttpRequest, HttpResponse>(
+                        new Tuple<Request, Response>(
                             req, 
-                            new HttpResponse(channel, false)
+                            new Response(channel, false)
                         )
                     );
                 }
@@ -205,17 +224,16 @@ public class Http {
         }
     }
 
-    public static abstract class HttpCallback implements Action<Tuple<HttpRequest, HttpResponse>> {
-    }
+    public static abstract class HttpCallback implements Action<Tuple<Request, Response>> {}
 
-    public static class HttpRequest {
+    public static class Request {
 
         public final String method;
         public final String uri;
         public final Map<String, String> headers;
         private Map<String, List<String>> params;
 
-        protected HttpRequest(String method, String uri, Map<String, String> headers) {
+        protected Request(String method, String uri, Map<String, String> headers) {
             this.method = method;
             this.uri = uri;
             this.headers = headers;
@@ -247,7 +265,7 @@ public class Http {
         }
     }
 
-    public static class HttpResponse {
+    public static class Response {
 
         public final Map<String, String> headers = new HashMap<String, String>();
         public int statusCode;
@@ -256,17 +274,17 @@ public class Http {
         private final boolean keepAlive;
         private ChannelFuture writeFuture;
 
-        HttpResponse(Channel channel, boolean keepAlive) {
+        Response(Channel channel, boolean keepAlive) {
             this.channel = channel;
             this.keepAlive = keepAlive;
         }
 
-        public HttpResponse write(Buffer chunk) {
-            return write(chunk._toChannelBuffer());
+        public Response write(Buffer chunk) {
+            return write(chunk.toChannelBuffer());
         }
 
-        public HttpResponse write(String chunk, String enc) {
-            return write(Buffer.fromString(chunk, enc)._toChannelBuffer());
+        public Response write(String chunk, String enc) {
+            return write(Buffer.fromString(chunk, enc).toChannelBuffer());
         }
 
         public void end() {
@@ -275,7 +293,7 @@ public class Http {
             }
         }
 
-        private HttpResponse write(ChannelBuffer chunk) {
+        private Response write(ChannelBuffer chunk) {
             if (!headWritten) {
                 org.jboss.netty.handler.codec.http.HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
                 response.setContent(chunk);
@@ -335,8 +353,8 @@ public class Http {
         }
 
         public Buffer append(Buffer buff) {
-            ChannelBuffer cb = buff._toChannelBuffer();
-            buffer.writeBytes(buff._toChannelBuffer());
+            ChannelBuffer cb = buff.toChannelBuffer();
+            buffer.writeBytes(buff.toChannelBuffer());
             cb.readerIndex(0);
             return this;
         }
@@ -371,7 +389,7 @@ public class Http {
         }
 
         public Buffer setBytes(int pos, Buffer b) {
-            buffer.setBytes(pos, b._toChannelBuffer());
+            buffer.setBytes(pos, b.toChannelBuffer());
             return this;
         }
 
@@ -414,7 +432,7 @@ public class Http {
             return new Buffer(buffer.duplicate());
         }
 
-        public ChannelBuffer _toChannelBuffer() {
+        public ChannelBuffer toChannelBuffer() {
             return buffer;
         }
     }
