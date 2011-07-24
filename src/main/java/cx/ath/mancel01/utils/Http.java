@@ -68,6 +68,11 @@ public class Http {
     public static Http createServer(HttpCallback handler) {
         return new Http(handler);
     }
+    
+    public static Http createServer(Action<Tuple<Request, Response>> handler) {
+        return new Http(handler);
+    }
+    
     private static final ExecutorService backgroundPool = 
             Executors.newCachedThreadPool();
     private static final ExecutorService corePool = 
@@ -79,10 +84,6 @@ public class Http {
             new ConcurrentHashMap<Channel, HttpConnection>();
     
     private Http(Action<Tuple<Request, Response>> handler) {
-        init(handler);
-    }
-
-    private Http(HttpCallback handler) {
         init(handler);
     }
     

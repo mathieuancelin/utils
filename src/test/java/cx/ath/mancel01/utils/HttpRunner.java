@@ -6,7 +6,7 @@ import static cx.ath.mancel01.utils.Http.*;
 public class HttpRunner {
         
     public static void main(String... args) throws Exception {
-        Http server = Http.createServer(new HttpCallback() {
+        Http server = Http.createServer(new Action<Tuple<Request, Response>>() {
             @Override
             public void apply(Tuple<Request, Response> reqResp) {
                 reqResp._2.write("<html><body><h1>Hello World! " 
