@@ -47,7 +47,7 @@ import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 /**
- * Small Actors library for multi-threaded programming models.
+ * Small Actors library for concurrent programming models.
  * 
  * @author Mathieu ANCELIN
  */
@@ -119,16 +119,22 @@ public final class Actors {
         new Thread() {
             @Override
             public void run() {
-                channel.unbind().awaitUninterruptibly();
-                bootstrap.releaseExternalResources();
-                remotingServerExecutor.shutdown();
-                bossServerExecutor.shutdown();
-                clientServerExecutor.shutdown();
-                clientBossServerExecutor.shutdown();
-                remotingServerExecutor.shutdownNow();
-                bossServerExecutor.shutdownNow();
-                clientServerExecutor.shutdownNow();
-                clientBossServerExecutor.shutdownNow();
+                try {
+                    channel.unbind().awaitUninterruptibly();
+                } catch(Throwable t) {}
+                try {
+                    bootstrap.releaseExternalResources();
+                } catch(Throwable t) {}
+                try {
+                    remotingServerExecutor.shutdown();
+                    bossServerExecutor.shutdown();
+                    clientServerExecutor.shutdown();
+                    clientBossServerExecutor.shutdown();
+                    remotingServerExecutor.shutdownNow();
+                    bossServerExecutor.shutdownNow();
+                    clientServerExecutor.shutdownNow();
+                    clientBossServerExecutor.shutdownNow();
+                } catch(Throwable t) {}
                 remotingServerExecutor = Executors.newCachedThreadPool();
                 bossServerExecutor = Executors.newCachedThreadPool();
                 clientServerExecutor = Executors.newCachedThreadPool();
@@ -162,6 +168,10 @@ public final class Actors {
         void send(Object msg, String from);
         
         void send(Object msg, ActorURL from);
+
+        ActorURL asLocalURL();
+
+        ActorURL asRemoteURL();
     }
 
     public static interface LocalActorRef extends ActorRef {
@@ -200,6 +210,7 @@ public final class Actors {
                 this.sender = sender;
             }
         }
+
         private ConcurrentLinkedQueue<Message> mailbox =
                 new ConcurrentLinkedQueue<Message>();
         private List<RemoteActorRef> refs = new ArrayList<RemoteActorRef>();
@@ -264,10 +275,12 @@ public final class Actors {
                         sender = Option.none();
                     }
                 } else {
-                    try {
-                        Thread.sleep(1);
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
+                    while (mailbox.isEmpty() && started.get()) { // sleep until there are new messages in mailbox
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException ex) {
+                            //ex.printStackTrace();
+                        }
                     }
                 }
             }
@@ -294,12 +307,16 @@ public final class Actors {
 
         @Override
         public final void send(Object msg) {
-            mailbox.add(new Message(msg, Option.<ActorRef>none()));
+            if (msg != null) {
+                mailbox.add(new Message(msg, Option.<ActorRef>none()));
+            }
         }
 
         @Override
         public final void send(Object msg, ActorRef from) {
-            mailbox.add(new Message(msg, Option.maybe(from)));
+            if (msg != null) {
+                mailbox.add(new Message(msg, Option.maybe(from)));
+            }
         }
 
         @Override
@@ -333,10 +350,12 @@ public final class Actors {
             return uuid;
         }
 
+        @Override
         public ActorURL asLocalURL() {
             return new LocalActorURL(Actors.host, Actors.port, uuid);
         }
         
+        @Override
         public ActorURL asRemoteURL() {
             return new RemoteActorURL(Actors.host, Actors.port, uuid);
         }
@@ -498,6 +517,16 @@ public final class Actors {
         @Override
         public boolean buzy() {
             return false; // TODO : find a better way
+        }
+
+        @Override
+        public ActorURL asLocalURL() {
+            return new RemoteActorURL(host, String.valueOf(port), name);
+        }
+
+        @Override
+        public ActorURL asRemoteURL() {
+            return new RemoteActorURL(host, String.valueOf(port), name);
         }
     }
     
