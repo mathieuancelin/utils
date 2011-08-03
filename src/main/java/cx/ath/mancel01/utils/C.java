@@ -16,14 +16,17 @@
  */
 package cx.ath.mancel01.utils;
 
-import cx.ath.mancel01.utils.F.Action;
-import cx.ath.mancel01.utils.F.F2;
-import cx.ath.mancel01.utils.F.Function;
-import cx.ath.mancel01.utils.F.Option;
-import cx.ath.mancel01.utils.F.Unit;
+import static cx.ath.mancel01.utils.F.*;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,23 +59,43 @@ public final class C {
         EnhancedList<T> parFilter(Function<T, Boolean> f);
         EnhancedList<T> parFilterNot(Function<T, Boolean> f);
         EnhancedList<T> _(T item);
+        EnhancedList<T> __(T item);
+        EnhancedList<T> _(Collection<T> items);
+        EnhancedList<T> __(Collection<T> item);
         EnhancedList<T> rem(T item);
         EnhancedList<T> rem(int index);
+        EnhancedList<T> sort(F2<T, T, Integer> comparator);
+        EnhancedList<T> distinct();
         EnhancedList<T> foreach(Function<T, Unit> f);
         EnhancedList<T> parForeach(Function<T, Unit> f);
+        EnhancedList<T> drop(int n);
+        EnhancedList<T> dropRight(int n);
+        <K> Map<K, EnhancedList<T>> groupBy(Function<T, K> f);
+        Iterable<EnhancedList<T>> grouped(int n);
         T reduce(F2<T, T, T> f);
         T reduceRight(F2<T, T, T> f);
         T head();
         Option<T> headOption();
+        T last();
+        Option<T> lastOption();
         EnhancedList<T> tail();
         int count(Function<T, Boolean> f);
         Option<T> find(Function<T, Boolean> f);
-        String join(String with);
-        String parJoin(String with);
+        String mkString(String with);
+        String mkString(String start, String with, String end);
+        String parMkString(String with);
+        String parMkString(String start, String with, String end);
         EnhancedList<T> takeLeft(int n);
         EnhancedList<T> takeRight(int n);
         EnhancedList<T> takeWhile(Function<T, Boolean> f);
         List<T> toList();
+        boolean nonEmpty();
+        boolean notContains(T t);
+        boolean notContainsAll(Collection<T> t);
+        Tuple<EnhancedList<T>, EnhancedList<T>> partition(Function<T, Boolean> f);
+        Tuple<EnhancedList<T>, EnhancedList<T>> splitAt(int n);
+        EnhancedList<T> reverse();
+        EnhancedList<T> union(List<T> list);
     }
     
     private static class EnhancedListImpl<T> extends ArrayList<T> implements EnhancedList<T> {
@@ -228,12 +251,12 @@ public final class C {
         }
 
         @Override
-        public String join(String with) {
+        public String mkString(String with) {
             return C.join(this).with(with);
         }
 
         @Override
-        public String parJoin(String with) {
+        public String parMkString(String with) {
             return C.join(this).parWith(with);
         }
 
@@ -310,6 +333,160 @@ public final class C {
         @Override
         public List<T> toList() {
             return (List<T>) this;
+        }
+
+        @Override
+        public EnhancedList<T> __(T item) {
+            this.add(this.size(), item);
+            return this;
+        }
+
+        @Override
+        public EnhancedList<T> _(Collection<T> items) {
+            this.addAll(items);
+            return this;
+        }
+
+        @Override
+        public EnhancedList<T> __(Collection<T> item) {
+            this.addAll(size(), item);
+            return this;
+        }
+
+        @Override
+        public EnhancedList<T> sort(final F2<T, T, Integer> comparator) {
+            Collections.sort(this, new Comparator<T>() {
+                @Override
+                public int compare(T o1, T o2) {
+                    return comparator.apply(o1, o2);
+                }
+            });
+            return this;
+        }
+
+        @Override
+        public EnhancedList<T> distinct() {
+            Set<T> dist = new HashSet<T>(this);
+            return new EnhancedListImpl<T>(dist);
+        }
+
+        @Override
+        public EnhancedList<T> drop(int n) {
+            if (!isEmpty()) {
+                return new EnhancedListImpl<T>(this.subList(0, n));
+            }
+            return new EnhancedListImpl<T>(new ArrayList<T>());
+        }
+
+        @Override
+        public EnhancedList<T> dropRight(int n) {
+            if (!isEmpty()) {
+                return new EnhancedListImpl<T>(this.subList(0, size() - n));
+            }
+            return new EnhancedListImpl<T>(new ArrayList<T>());
+        }
+
+        @Override
+        public <K> Map<K, EnhancedList<T>> groupBy(Function<T, K> f) {
+            Map<K, EnhancedList<T>> result = new HashMap<K, EnhancedList<T>>();
+            for (T t : this) {
+                K k = f.apply(t);
+                if (!result.containsKey(k)) {
+                    result.put(k, new EnhancedListImpl<T>(new ArrayList<T>()));
+                }
+                result.get(k).add(t);
+            }
+            return result;
+        }
+
+        @Override
+        public Iterable<EnhancedList<T>> grouped(int n) {
+            List<List<T>> list = C.paginate(this, n);
+            List<EnhancedList<T>> result = new ArrayList<EnhancedList<T>>();
+            for (List<T> l : list) {
+                result.add(new EnhancedListImpl<T>(l));
+            }
+            return (Iterable<EnhancedList<T>>) result;
+        }
+
+        @Override
+        public T last() {
+            if (!isEmpty()) {
+                return get(size() - 1);
+            }
+            return null;
+        }
+
+        @Override
+        public Option<T> lastOption() {
+            if (!isEmpty()) {
+                return Option.maybe(get(size() - 1));
+            }
+            return Option.none();
+        }
+
+        @Override
+        public String mkString(String start, String with, String end) {
+            return C.join(this).before(start).after(end).with(with);
+        }
+
+        @Override
+        public String parMkString(String start, String with, String end) {
+            return C.join(this).before(start).after(end).parWith(with);
+        }
+
+        @Override
+        public boolean nonEmpty() {
+            return !isEmpty();
+        }
+
+        @Override
+        public Tuple<EnhancedList<T>, EnhancedList<T>> partition(Function<T, Boolean> f) {
+            EnhancedListImpl<T> l1 = new EnhancedListImpl<T>(new ArrayList<T>());
+            EnhancedListImpl<T> l2 = new EnhancedListImpl<T>(new ArrayList<T>());
+            for (T t : this) {
+                if (f.apply(t)) {
+                    l1.add(t);
+                } else {
+                    l2.add(t);
+                }
+            }
+            return new Tuple<EnhancedList<T>, EnhancedList<T>>(l1, l2);
+        }
+
+        @Override
+        public Tuple<EnhancedList<T>, EnhancedList<T>> splitAt(int n) {
+            return new Tuple<EnhancedList<T>, EnhancedList<T>>(
+                    new EnhancedListImpl<T>(subList(0, n)), 
+                    new EnhancedListImpl<T>(subList(n + 1, size() - 1))
+                    );
+        }
+
+        @Override
+        public EnhancedList<T> reverse() {
+            Collections.reverse(this);
+            return this;
+        }
+
+        @Override
+        public EnhancedList<T> union(List<T> list) {
+            EnhancedListImpl<T> result = new EnhancedListImpl<T>(this);
+            for (T t : list) {
+                if (!result.contains(t)) {
+                    result.add(t);
+                }
+            }
+            return result;
+        }
+
+        @Override
+        public boolean notContains(T t) {
+            return !contains(t);
+        }
+
+        @Override
+        public boolean notContainsAll(Collection<T> t) {
+            return !containsAll(t);
         }
     } 
     

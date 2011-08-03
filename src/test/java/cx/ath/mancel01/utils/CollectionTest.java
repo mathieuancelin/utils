@@ -205,7 +205,7 @@ public class CollectionTest {
     public void join() {
         List<String> values = Arrays.asList(new String[]{"Hello", "dude", "!"});
         String expected = "Hello | dude | !";
-        String result = eList(values).join(" | ");
+        String result = eList(values).mkString(" | ");
         Assert.assertEquals(expected, result);
     }
 
@@ -213,7 +213,7 @@ public class CollectionTest {
     public void parJoin() {
         List<String> values = Arrays.asList(new String[]{"Hello", "dude", "!"});
         String expected = "Hello | dude | !";
-        String result = eList(values).parJoin(" | ");
+        String result = eList(values).parMkString(" | ");
         Assert.assertEquals(expected, result);
     }
 
