@@ -17,7 +17,10 @@
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.Action;
+import cx.ath.mancel01.utils.F.F2;
 import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.F.Option;
+import cx.ath.mancel01.utils.F.Unit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -34,6 +37,282 @@ import java.util.concurrent.Future;
 public final class C {
 
     private C() {}
+    
+    public static <T> EnhancedList<T> eList(List<T> list) {
+        return new EnhancedListImpl<T>(list);
+    }
+    
+    public static <T> EnhancedList<T> eList(T firstItem) {
+        List<T> list = new ArrayList<T>();
+        list.add(firstItem);
+        return new EnhancedListImpl<T>(list);
+    }
+    
+    public static interface EnhancedList<T> extends List<T> {
+        <R> EnhancedList<R> map(Function<T, R> f);
+        <R> EnhancedList<R> parMap(Function<T, R> f);
+        EnhancedList<T> filter(Function<T, Boolean> f);
+        EnhancedList<T> filterNot(Function<T, Boolean> f);
+        EnhancedList<T> parFilter(Function<T, Boolean> f);
+        EnhancedList<T> parFilterNot(Function<T, Boolean> f);
+        EnhancedList<T> _(T item);
+        EnhancedList<T> rem(T item);
+        EnhancedList<T> rem(int index);
+        EnhancedList<T> foreach(Function<T, Unit> f);
+        EnhancedList<T> parForeach(Function<T, Unit> f);
+        T reduce(F2<T, T, T> f);
+        T reduceRight(F2<T, T, T> f);
+        T head();
+        Option<T> headOption();
+        EnhancedList<T> tail();
+        int count(Function<T, Boolean> f);
+        Option<T> find(Function<T, Boolean> f);
+        String join(String with);
+        String parJoin(String with);
+        EnhancedList<T> takeLeft(int n);
+        EnhancedList<T> takeRight(int n);
+        EnhancedList<T> takeWhile(Function<T, Boolean> f);
+        List<T> toList();
+    }
+    
+    private static class EnhancedListImpl<T> extends ArrayList<T> implements EnhancedList<T> {
+        
+        EnhancedListImpl(List<T> list) {
+            super(list);
+        }
+        
+        EnhancedListImpl(Collection<T> list) {
+            super(list);
+        }
+        
+        @Override
+        public EnhancedList<T> rem(T item) {
+            this.remove(item);
+            return this;
+        }
+                
+        @Override
+        public EnhancedList<T> rem(int index) {
+            this.remove(index);
+            return this;
+        }
+
+        @Override
+        public <R> EnhancedList<R> map(Function<T, R> f) {
+            return new EnhancedListImpl<R>(forEach(this).apply(f).get());
+        }
+
+        @Override
+        public <R> EnhancedList<R> parMap(Function<T, R> f) {
+            return new EnhancedListImpl<R>(forEach(this).parApply(f).get());
+        }
+
+        @Override
+        public EnhancedList<T> filter(final Function<T, Boolean> f) {
+            return new EnhancedListImpl<T>(forEach(this).filteredBy(new Predicate<T>() {
+
+                @Override
+                public boolean apply(T t) {
+                    return f.apply(t);
+                }
+            }).get());
+        }
+
+        @Override
+        public EnhancedList<T> filterNot(final Function<T, Boolean> f) {
+            return new EnhancedListImpl<T>(forEach(this).filteredBy(new Predicate<T>() {
+
+                @Override
+                public boolean apply(T t) {
+                    return !f.apply(t);
+                }
+            }).get());
+        }
+
+        @Override
+        public EnhancedList<T> parFilter(final Function<T, Boolean> f) {
+            return new EnhancedListImpl<T>(forEach(this).parFilteredBy(new Predicate<T>() {
+
+                @Override
+                public boolean apply(T t) {
+                    return f.apply(t);
+                }
+            }).get());
+        }
+
+        @Override
+        public EnhancedList<T> parFilterNot(final Function<T, Boolean> f) {
+            return new EnhancedListImpl<T>(forEach(this).parFilteredBy(new Predicate<T>() {
+
+                @Override
+                public boolean apply(T t) {
+                    return !f.apply(t);
+                }
+            }).get());
+        }
+
+        @Override
+        public EnhancedList<T> _(T item) {
+            this.add(item);
+            return this;
+        }
+
+        @Override
+        public EnhancedList<T> foreach(final Function<T, Unit> f) {
+            return new EnhancedListImpl<T>(forEach(this).execute(new Action<T>() {
+
+                @Override
+                public void apply(T t) {
+                    f.apply(t);
+                }
+            }).get());
+        }
+
+        @Override
+        public EnhancedList<T> parForeach(final Function<T, Unit> f) {
+            return new EnhancedListImpl<T>(forEach(this).parExecute(new Action<T>() {
+
+                @Override
+                public void apply(T t) {
+                    f.apply(t);
+                }
+            }).get());
+        }
+
+        @Override
+        public T head() {
+            if (this.isEmpty()) {
+                return null;
+            } else {
+                return this.get(0);
+            }
+        }
+
+        @Override
+        public Option<T> headOption() {
+            if (this.isEmpty()) {
+                return Option.none();
+            } else {
+                return Option.maybe(this.get(0));
+            }
+        }
+
+        @Override
+        public EnhancedList<T> tail() {
+            if (!this.isEmpty()) {
+                return new EnhancedListImpl<T>(this.subList(1, this.size()));
+            } else {
+                return new EnhancedListImpl<T>(new ArrayList<T>());
+            }
+        }
+
+        @Override
+        public int count(Function<T, Boolean> f) {
+            int count = 0;
+            for (T t : this) {
+                if (f.apply(t)) {
+                    count ++;
+                }
+            }
+            return count;
+        }
+
+        @Override
+        public Option<T> find(Function<T, Boolean> f) {
+            for (T t : this) {
+                if (f.apply(t)) {
+                    return Option.maybe(t);
+                }
+            }
+            return Option.none();
+        }
+
+        @Override
+        public String join(String with) {
+            return C.join(this).with(with);
+        }
+
+        @Override
+        public String parJoin(String with) {
+            return C.join(this).parWith(with);
+        }
+
+        @Override
+        public EnhancedList<T> takeLeft(int n) {
+            List<T> list = new ArrayList<T>();
+            if (!this.isEmpty()) {
+                for (int i = 0; i < n; i++) {
+                    try {
+                        list.add(this.get(i));
+                    } catch (Exception e) {}
+                }
+            }
+            return new EnhancedListImpl<T>(list);
+        }
+
+        @Override
+        public EnhancedList<T> takeRight(int n) {
+            List<T> list = new ArrayList<T>();
+            if (!this.isEmpty()) {
+                for (int i = n; i > 0; i--) {
+                    try {
+                        list.add(this.get(i + 1));
+                    } catch (Exception e) {}
+                }
+            }
+            return new EnhancedListImpl<T>(list);
+        }
+
+        @Override
+        public EnhancedList<T> takeWhile(Function<T, Boolean> f) {
+            List<T> list = new ArrayList<T>();
+            for (T t : this) {
+                if (f.apply(t)) {
+                    list.add(t);
+                }
+            }
+            return new EnhancedListImpl<T>(list);
+        }
+
+        @Override
+        public T reduce(F2<T, T, T> f) {
+            T result = null;
+            for (T t : this) {
+                if (t != null) {
+                    if (result == null) {
+                        result = t;
+                    } else {
+                        result = f.apply(result, t);
+                    }
+                }
+            }
+            return result;
+        }
+
+        @Override
+        public T reduceRight(F2<T, T, T> f) {
+            T result = null;
+            for (int i = this.size(); i > 0; i--) {
+                try {
+                    T t = this.get(i - 1);
+                    if (t != null) {
+                        if (result == null) {
+                            result = t;
+                        } else {
+                            result = f.apply(result, t);
+                        }
+                    }
+                } catch (Exception e) {}
+            }
+            return result;
+        }
+
+        @Override
+        public List<T> toList() {
+            return (List<T>) this;
+        }
+    } 
+    
     /**
      * Return an object capable of applying a function for each item in the collection.
      *
