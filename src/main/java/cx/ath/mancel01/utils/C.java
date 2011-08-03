@@ -90,6 +90,7 @@ public final class C {
         EnhancedList<T> takeWhile(Function<T, Boolean> f);
         List<T> toList();
         boolean nonEmpty();
+        boolean contains(T t);
         boolean notContains(T t);
         boolean notContainsAll(Collection<T> t);
         Tuple<EnhancedList<T>, EnhancedList<T>> partition(Function<T, Boolean> f);
@@ -99,6 +100,10 @@ public final class C {
     }
     
     private static class EnhancedListImpl<T> extends ArrayList<T> implements EnhancedList<T> {
+        
+        EnhancedListImpl() {
+            super(new ArrayList<T>());
+        }
         
         EnhancedListImpl(List<T> list) {
             super(list);
