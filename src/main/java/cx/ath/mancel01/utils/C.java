@@ -140,7 +140,7 @@ public final class C {
             return new EnhancedListImpl<T>(forEach(this).filteredBy(new Predicate<T>() {
 
                 @Override
-                public boolean apply(T t) {
+                public Boolean apply(T t) {
                     return f.apply(t);
                 }
             }).get());
@@ -151,7 +151,7 @@ public final class C {
             return new EnhancedListImpl<T>(forEach(this).filteredBy(new Predicate<T>() {
 
                 @Override
-                public boolean apply(T t) {
+                public Boolean apply(T t) {
                     return !f.apply(t);
                 }
             }).get());
@@ -162,7 +162,7 @@ public final class C {
             return new EnhancedListImpl<T>(forEach(this).parFilteredBy(new Predicate<T>() {
 
                 @Override
-                public boolean apply(T t) {
+                public Boolean apply(T t) {
                     return f.apply(t);
                 }
             }).get());
@@ -173,7 +173,7 @@ public final class C {
             return new EnhancedListImpl<T>(forEach(this).parFilteredBy(new Predicate<T>() {
 
                 @Override
-                public boolean apply(T t) {
+                public Boolean apply(T t) {
                     return !f.apply(t);
                 }
             }).get());
@@ -541,7 +541,7 @@ public final class C {
     public static Predicate<String> eq(final String value) {
         return new Predicate<String>() {
             @Override
-            public boolean apply(String t) {
+            public Boolean apply(String t) {
                 return value.equals(t);
             }
         };
@@ -549,7 +549,7 @@ public final class C {
     public static Predicate<Integer> eq(final int value) {
         return new Predicate<Integer>() {
             @Override
-            public boolean apply(Integer t) {
+            public Boolean apply(Integer t) {
                 return value == t.intValue();
             }
         };
@@ -557,7 +557,7 @@ public final class C {
     public static Predicate<Long> eq(final long value) {
         return new Predicate<Long>() {
             @Override
-            public boolean apply(Long t) {
+            public Boolean apply(Long t) {
                 return value == t.longValue();
             }
         };
@@ -565,7 +565,7 @@ public final class C {
     public static Predicate<Object> eq(final Object value) {
         return new Predicate<Object>() {
             @Override
-            public boolean apply(Object t) {
+            public Boolean apply(Object t) {
                 return value.equals(t);
             }
         };
@@ -573,7 +573,7 @@ public final class C {
     public static Predicate<String> notEq(final String value) {
         return new Predicate<String>() {
             @Override
-            public boolean apply(String t) {
+            public Boolean apply(String t) {
                 return !value.equals(t);
             }
         };
@@ -581,7 +581,7 @@ public final class C {
     public static Predicate<Long> notEq(final long value) {
         return new Predicate<Long>() {
             @Override
-            public boolean apply(Long t) {
+            public Boolean apply(Long t) {
                 return value != t.longValue();
             }
         };
@@ -589,7 +589,7 @@ public final class C {
     public static Predicate<Integer> notEq(final int value) {
         return new Predicate<Integer>() {
             @Override
-            public boolean apply(Integer t) {
+            public Boolean apply(Integer t) {
                 return value != t.intValue();
             }
         };
@@ -597,7 +597,7 @@ public final class C {
     public static Predicate<Object> notEq(final Object value) {
         return new Predicate<Object>() {
             @Override
-            public boolean apply(Object t) {
+            public Boolean apply(Object t) {
                 return value.equals(t);
             }
         };
@@ -605,7 +605,7 @@ public final class C {
     public static Predicate<Object> isNull(final Object value) {
         return new Predicate<Object>() {
             @Override
-            public boolean apply(Object t) {
+            public Boolean apply(Object t) {
                 return value == null;
             }
         };
@@ -613,7 +613,7 @@ public final class C {
     public static Predicate<Object> notNull(final Object value) {
         return new Predicate<Object>() {
             @Override
-            public boolean apply(Object t) {
+            public Boolean apply(Object t) {
                 return !(value == null);
             }
         };
@@ -621,7 +621,7 @@ public final class C {
     public static Predicate<String> matchRegex(final String regexp) {
         return new Predicate<String>() {
             @Override
-            public boolean apply(String t) {
+            public Boolean apply(String t) {
                 return regexp.matches(t);
             }
         };
@@ -629,7 +629,7 @@ public final class C {
     public static Predicate<Integer> greaterThan(final int value) {
         return new Predicate<Integer>() {
             @Override
-            public boolean apply(Integer t) {
+            public Boolean apply(Integer t) {
                 return value < t.intValue();
             }
         };
@@ -637,7 +637,7 @@ public final class C {
     public static Predicate<Long> greaterThan(final long value) {
         return new Predicate<Long>() {
             @Override
-            public boolean apply(Long t) {
+            public Boolean apply(Long t) {
                 return value < t.longValue();
             }
         };
@@ -645,7 +645,7 @@ public final class C {
     public static Predicate<Integer> lesserThan(final int value) {
         return new Predicate<Integer>() {
             @Override
-            public boolean apply(Integer t) {
+            public Boolean apply(Integer t) {
                 return value > t.intValue();
             }
         };
@@ -653,7 +653,7 @@ public final class C {
     public static Predicate<Long> lesserThan(final long value) {
         return new Predicate<Long>() {
             @Override
-            public boolean apply(Long t) {
+            public Boolean apply(Long t) {
                 return value > t.longValue();
             }
         };
@@ -661,7 +661,7 @@ public final class C {
     public static Predicate<Integer> greaterEqThan(final int value) {
         return new Predicate<Integer>() {
             @Override
-            public boolean apply(Integer t) {
+            public Boolean apply(Integer t) {
                 return value <= t.intValue();
             }
         };
@@ -669,7 +669,7 @@ public final class C {
     public static Predicate<Long> greaterEqThan(final long value) {
         return new Predicate<Long>() {
             @Override
-            public boolean apply(Long t) {
+            public Boolean apply(Long t) {
                 return value <= t.longValue();
             }
         };
@@ -677,7 +677,7 @@ public final class C {
     public static Predicate<Integer> lesserEqThan(final int value) {
         return new Predicate<Integer>() {
             @Override
-            public boolean apply(Integer t) {
+            public Boolean apply(Integer t) {
                 return value >= t.intValue();
             }
         };
@@ -685,7 +685,7 @@ public final class C {
     public static Predicate<Long> lesserEqThan(final long value) {
         return new Predicate<Long>() {
             @Override
-            public boolean apply(Long t) {
+            public Boolean apply(Long t) {
                 return value >= t.longValue();
             }
         };
@@ -721,9 +721,8 @@ public final class C {
         String parWith(String separator);
     }
 
-    public static interface Predicate<T> {
+    public static interface Predicate<T> extends Function<T, Boolean> {
 
-        boolean apply(T t);
     }
 
     public static interface Filterable<T> {

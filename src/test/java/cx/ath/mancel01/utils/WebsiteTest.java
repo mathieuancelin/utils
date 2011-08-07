@@ -44,12 +44,10 @@ public class WebsiteTest {
         return website.toRight(NotFound)
             .right
                 .map(new Function<Website, Either<String, WebsiteCase>>() {
-                    @Override
                     public Either<String, WebsiteCase> apply(final Website ws) {
                         Option<User> maybeUser = User.connected();
                         return maybeUser.map(
                             new Function<User, WebsiteCase>() {
-                                @Override
                                 public WebsiteCase apply(User webuser) {
                                     return WebsiteCase.create(ws.id, webuser.id);
                                 }
@@ -65,12 +63,10 @@ public class WebsiteTest {
             .right
                 .map(
                     new Function<Website, Either<String, WebsiteCase>>() {
-                        @Override
                         public Either<String, WebsiteCase> apply(final Website ws) {
                             Option<User> maybeUser = User.unknown();
                             return maybeUser.map(
                                 new Function<User, WebsiteCase>() {
-                                    @Override
                                     public WebsiteCase apply(User webuser) {
                                         return WebsiteCase.create(ws.id, webuser.id);
                                     }
@@ -87,12 +83,10 @@ public class WebsiteTest {
             .right
                 .map(
                     new Function<Website, Either<String, WebsiteCase>>() {
-                        @Override
                         public Either<String, WebsiteCase> apply(final Website ws) {
                             Option<User> maybeUser = User.connected();
                             return maybeUser.map(
                                 new Function<User, WebsiteCase>() {
-                                    @Override
                                     public WebsiteCase apply(User webuser) {
                                         return WebsiteCase.create(ws.id, webuser.id);
                                     }
@@ -104,22 +98,18 @@ public class WebsiteTest {
     }
 
     public Function<String, String> error = new Function<String, String>() {
-        @Override
         public String apply(String value) {
             return "error : " + value.toString();
         }
     };
     
     public Function<Either<String, WebsiteCase>, String> foldSuccess = new Function<Either<String, WebsiteCase>, String>() {
-
-        @Override
         public String apply(Either<String, WebsiteCase> t) {
             return t.fold(error, success).get();
         }
     };
     
     public Function<WebsiteCase, String> success = new Function<WebsiteCase, String>() {
-        @Override
         public String apply(WebsiteCase value) {
             return "success : " + value.toString();
         }
