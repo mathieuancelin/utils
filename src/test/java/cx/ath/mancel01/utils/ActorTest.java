@@ -1,6 +1,5 @@
 package cx.ath.mancel01.utils;
 
-import org.junit.Ignore;
 import cx.ath.mancel01.utils.F.Action;
 import cx.ath.mancel01.utils.Actors.Actor;
 import org.junit.Test;
@@ -15,7 +14,7 @@ public class ActorTest {
     
     private static CountDownLatch userlatch = new CountDownLatch(12);
     
-    @Test @Ignore
+    @Test //@Ignore
     public void testChatRoom() throws Exception {
         User user1 = new User("maurice");
         User user2 = new User("john");
@@ -48,7 +47,7 @@ public class ActorTest {
         Actors.shutdownAll();
     }
     
-    @Test @Ignore
+    @Test //@Ignore
     public void testPingPong() throws Exception {
         Pong pong = new Pong();
         Ping ping = new Ping(pong);

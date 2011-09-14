@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -219,6 +220,7 @@ public final class Actors {
         private AtomicBoolean buzy = new AtomicBoolean(false);
         protected Option<ActorRef> sender = Option.none();
         protected final String uuid;
+        private CountDownLatch latch = new CountDownLatch(1);
 
         public Actor() {
             uuid = UUID.randomUUID().toString();
@@ -253,6 +255,23 @@ public final class Actors {
         public final Actor me() {
             return this;
         }
+        
+        private void waitIfMailboxIsEmpty() {
+            if (mailbox.isEmpty()) {
+                setLatchAndWait();
+            }
+        }
+        
+        private void setLatchAndWait() {
+            if (latch.getCount() == 0) {
+                latch = new CountDownLatch(1);
+            }
+            try {
+                latch.await();
+            } catch (InterruptedException ex) {
+                //ex.printStackTrace();
+            }
+        }
 
         /**
          * Method to loop the reception function to read all messages
@@ -263,6 +282,7 @@ public final class Actors {
         public final void loop(Action react) {
             this.react = react;
             while (started.get()) {
+                waitIfMailboxIsEmpty();
                 Message ret = mailbox.poll();
                 if (ret != null) {
                     if (ret.payload.getClass().equals(PoisonPill.class)) {
@@ -274,15 +294,7 @@ public final class Actors {
                         buzy.compareAndSet(true, false);
                         sender = Option.none();
                     }
-                } else {
-                    while (mailbox.isEmpty() && started.get()) { // sleep until there are new messages in mailbox
-                        try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException ex) {
-                            //ex.printStackTrace();
-                        }
-                    }
-                }
+                } 
             }
         }
 
@@ -291,6 +303,7 @@ public final class Actors {
          */
         public final void react(Action<Object> react) {
             this.react = react;
+            waitIfMailboxIsEmpty();
             Message ret = mailbox.poll();
             if (ret != null) {
                 if (ret.payload.getClass().equals(PoisonPill.class)) {
@@ -302,13 +315,14 @@ public final class Actors {
                     buzy.compareAndSet(true, false);
                     sender = Option.none();
                 }
-            }
+            } 
         }
 
         @Override
         public final void send(Object msg) {
             if (msg != null) {
                 mailbox.add(new Message(msg, Option.<ActorRef>none()));
+                latch.countDown();
             }
         }
 
@@ -316,6 +330,7 @@ public final class Actors {
         public final void send(Object msg, ActorRef from) {
             if (msg != null) {
                 mailbox.add(new Message(msg, Option.maybe(from)));
+                latch.countDown();
             }
         }
 
