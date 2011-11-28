@@ -69,7 +69,37 @@ public class Registry {
         EventBus.processEvent(new BeanEvent(BeanEventType.BEAN_REGISTRATION, bean.reference()));
         return new BeanRegistration<T>(clazz, emptyProps, id);
     }
-
+    
+    public static <T, U extends T> BeanRegistration<T> register(final Class<T> clazz, final Class<U> implementation) {
+        return register(clazz, new Provider<T>() {
+            @Override
+            public T get() {
+                Object impl = null;
+                try {
+                    impl = implementation.newInstance();
+                } catch (Exception ex) {
+                    throw new F.ExceptionWrapper(ex);
+                }
+                return (T) impl;
+            }
+        });
+    }
+    
+    public static <T, U extends T> BeanRegistration<T> register(Class<T> clazz, Provider<U> implementation) {
+        String id = UUID.randomUUID().toString();
+        Key key = new Key(clazz, emptyProps);
+        Bean<T> bean = new Bean<T>(clazz, implementation, id, emptyProps);
+        if (!beans.containsKey(key)) {
+            beans.put(key, new HashMap<String, Bean>());
+        }
+        Map<String, Bean> beanList = beans.get(key);
+        if (!beanList.containsKey(id)) {
+            beanList.put(id, bean);
+        }
+        EventBus.processEvent(new BeanEvent(BeanEventType.BEAN_REGISTRATION, bean.reference()));
+        return new BeanRegistration<T>(clazz, emptyProps, id);
+    }
+    
     public static <T> Option<BeanReference<T>> reference(Class<T> clazz) {
         Key key = new Key(clazz, emptyProps);
         if (!beans.containsKey(key)) {
@@ -101,6 +131,10 @@ public class Registry {
             implems.add(b.reference());
         }
         return implems;
+    }
+    
+    public static <T> MaybeReference<T> optionalReference(Class<T> clazz) {
+        return new BeanReference<T>(clazz, emptyProps, "dumb");
     }
 
     public static <T> T instance(Class<T> clazz) {
@@ -151,15 +185,36 @@ public class Registry {
         EventBus.listeners.get(clazz).add(listener);
         return new BeanListenerRegistration(listener);
     }
+    
+    private static class FilledProvider<T> implements Provider<T> {
+        
+        private final T impl;
+
+        private FilledProvider(T impl) {
+            this.impl = impl;
+        }
+
+        @Override
+        public T get() {
+            return impl;
+        }
+    }
 
     private static class Bean<T> {
 
         private final Class<T> clazz;
-        private final Object implementation;
+        private final Provider<T> implementation;
         private final String id;
         private final Map<String, String> properties;
 
         public Bean(Class<T> clazz, Object implementation, String id, Map<String, String> properties) {
+            this.clazz = clazz;
+            this.implementation = new FilledProvider<T>((T) implementation);
+            this.id = id;
+            this.properties = properties;
+        }
+        
+        public Bean(Class<T> clazz, Provider<T> implementation, String id, Map<String, String> properties) {
             this.clazz = clazz;
             this.implementation = implementation;
             this.id = id;
@@ -171,7 +226,7 @@ public class Registry {
         }
 
         public T instance() {
-            return (T) implementation;
+            return implementation.get();
         }
         
         public Option<T> optional() {
@@ -330,7 +385,16 @@ public class Registry {
 
     public static interface BeanListener<T> {
 
-        public void onEvent(BeanEvent evt);
+        public void onEvent(BeanEvent event);
+    } 
+    
+    public static interface Provider<T> {
+        T get();
+    }
+    
+    public static interface MaybeReference<T> {
+        public Class<T> type();
+        public Option<T> optional();
     }
 
     public static class BeanEvent {
@@ -352,7 +416,7 @@ public class Registry {
         }
     }
 
-    public static class BeanReference<T> {
+    public static class BeanReference<T> implements MaybeReference<T> {
 
         private final String id;
         private final Class<T> clazz;
@@ -364,6 +428,7 @@ public class Registry {
             this.clazz = clazz;
         }
 
+        @Override
         public Class<T> type() {
             return clazz;
         }
@@ -383,6 +448,7 @@ public class Registry {
             return null;
         }
         
+        @Override
         public Option<T> optional() {
             return Option.maybe(instance());
         }
