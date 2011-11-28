@@ -41,6 +41,10 @@ public final class C {
 
     private C() {}
     
+    public static <T> EnhancedList<T> eList() {
+        return new EnhancedListImpl<T>();
+    }
+    
     public static <T> EnhancedList<T> eList(List<T> list) {
         return new EnhancedListImpl<T>(list);
     }
@@ -48,6 +52,14 @@ public final class C {
     public static <T> EnhancedList<T> eList(T firstItem) {
         List<T> list = new ArrayList<T>();
         list.add(firstItem);
+        return new EnhancedListImpl<T>(list);
+    }
+    
+    public static <T> EnhancedList<T> eList(T... firstItem) {
+        List<T> list = new ArrayList<T>();
+        for (T t : firstItem) {
+            list.add(t);
+        }
         return new EnhancedListImpl<T>(list);
     }
     
