@@ -133,8 +133,25 @@ public class Registry {
         return implems;
     }
     
-    public static <T> MaybeReference<T> optionalReference(Class<T> clazz) {
-        return new BeanReference<T>(clazz, emptyProps, "dumb");
+    public static <T> MaybeReference<T> optionalReference(final Class<T> clazz) {
+        return new MaybeReference<T>() {
+            @Override
+            public Class<T> type() {
+                return clazz;
+            }
+
+            @Override
+            public Option<T> optional() {
+                Key key = new Key(clazz, emptyProps);
+                if (!beans.containsKey(key)) {
+                    return Option.none();
+                }
+                for (Bean b : beans.get(key).values()) {
+                    return b.optional();
+                }
+                return Option.none();
+            }
+        };
     }
 
     public static <T> T instance(Class<T> clazz) {
@@ -171,10 +188,10 @@ public class Registry {
     }
 
     public static BeanListenerRegistration registerListener(BeanListener<?> listener) {
-        if (!EventBus.listeners.containsKey(FakeEvent.class)) {
-            EventBus.listeners.putIfAbsent(FakeEvent.class, new ArrayList<BeanListener<?>>());
+        if (!EventBus.listeners.containsKey(FakeFilterType.class)) {
+            EventBus.listeners.putIfAbsent(FakeFilterType.class, new ArrayList<BeanListener<?>>());
         }
-        EventBus.listeners.get(FakeEvent.class).add(listener);
+        EventBus.listeners.get(FakeFilterType.class).add(listener);
         return new BeanListenerRegistration(listener);
     }
 
@@ -361,7 +378,7 @@ public class Registry {
 
         private static void processEvent(BeanEvent evt) {
             for (Class c : listeners.keySet()) {
-                if (c.equals(FakeEvent.class)) {
+                if (c.equals(FakeFilterType.class)) {
                     for (BeanListener listener : listeners.get(c)) {
                         listener.onEvent(evt);
                     }
@@ -376,7 +393,7 @@ public class Registry {
         }
     }
 
-    private static class FakeEvent {}
+    private static class FakeFilterType {}
 
     public static enum BeanEventType {
 

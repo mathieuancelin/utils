@@ -1,10 +1,11 @@
 package cx.ath.mancel01.utils;
 
 
-import cx.ath.mancel01.utils.Registry.BeanEvent;
-import cx.ath.mancel01.utils.Registry.BeanRegistration;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static cx.ath.mancel01.utils.Registry.*;
+import static cx.ath.mancel01.utils.F.*;
 
 public class RegistryTest {
     
@@ -16,20 +17,20 @@ public class RegistryTest {
     public void testApp() {
         SimpleLogger.enableTrace(true);
         SimpleLogger.enableColors(true);
-        Registry.BeanListenerRegistration reg1 = Registry.registerListener(new Registry.BeanListener() {
+        BeanListenerRegistration reg1 = Registry.registerListener(new BeanListener() {
             @Override
             public void onEvent(BeanEvent evt) {
-                if (evt.type() == Registry.BeanEventType.BEAN_REGISTRATION) {
+                if (evt.type() == BeanEventType.BEAN_REGISTRATION) {
                     listenerCounter++;
                 } else {
                     listenerCounter--;
                 }
             }
         });
-        Registry.BeanListenerRegistration reg2 = Registry.registerListener(new Registry.BeanListener<String>() {
+        BeanListenerRegistration reg2 = Registry.registerListener(new BeanListener<String>() {
             @Override
             public void onEvent(BeanEvent evt) {
-                if (evt.type() == Registry.BeanEventType.BEAN_REGISTRATION) {
+                if (evt.type() == BeanEventType.BEAN_REGISTRATION) {
                     listenerStringCounter++;
                 } else {
                     listenerStringCounter--;
@@ -55,5 +56,22 @@ public class RegistryTest {
         Assert.assertEquals(listenerStringCounter, 0);
         reg1.unregistrer();
         reg2.unregistrer();
+        BeanRegistration<String> string1 = Registry.register(String.class, "40");
+        BeanRegistration<String> string2 = Registry.register(String.class, "41");
+        BeanRegistration<String> string3 = Registry.register(String.class, "42");
+        Registry.instances(String.class).foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                SimpleLogger.info(t);
+                return Unit.unit();
+            }
+        });
+        Registry.references(String.class).foreach(new Function<BeanReference<String>, Unit>() {
+            @Override
+            public Unit apply(BeanReference<String> t) {
+                SimpleLogger.info(t.optional().getOrElse("No value"));
+                return Unit.unit();
+            }
+        });
     }
 }
