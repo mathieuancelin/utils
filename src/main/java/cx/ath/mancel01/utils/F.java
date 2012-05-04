@@ -277,8 +277,16 @@ public final class F {
             return new Some<T>(value);
         }
 
-        public static <T> Maybe<T> maybe(T value) {
-            return new Maybe<T>(value);
+        public static <T> Option<T> maybe(T value) {
+            return apply(value);
+        }
+        
+        public static <T> Option<T> apply(T value) {
+            if (value == null) {
+                return Option.none();
+            } else {
+                return Option.some(value);
+            }
         }
     }
 
@@ -341,73 +349,6 @@ public final class F {
         @Override
         public boolean isEmpty() {
             return false;
-        }
-    }
-    
-    /**
-     * A not so good version of some. Mostly used to wrap
-     * return of library methods.
-     *
-     * @param <T>
-     */
-    public static class Maybe<T> extends Option<T> {
-
-        private final T input;
-
-        public Maybe(T input) {
-            this.input = input;
-        }
-
-        @Override
-        public boolean isDefined() {
-            return !(input == null);
-        }
-
-        @Override
-        public T get() {
-            return input;
-        }
-
-        @Override
-        public Iterator<T> iterator() {
-            if (input == null) {
-                return Collections.<T>emptyList().iterator();
-            } else {
-                return Collections.singletonList(input).iterator();
-            }
-        }
-
-        @Override
-        public String toString() {
-            return "Maybe ( " + input + " )";
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return !isDefined();
-        }
-    }
-
-    public static class Any<T> extends Some<T> {
-
-        public Any(T value) {
-            super(value);
-        }
-
-        public Class<?> type() {
-            return value.getClass();
-        }
-
-        public boolean isTyped(Class<?> type) {
-            return type.isAssignableFrom(type());
-        }
-
-        public <A> Option<A> typed(Class<A> type) {
-            if (isTyped(type)) {
-                return Option.some(type.cast(value));
-            } else {
-                return Option.none();
-            }
         }
     }
 

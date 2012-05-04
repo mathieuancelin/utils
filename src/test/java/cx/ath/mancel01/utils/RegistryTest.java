@@ -62,6 +62,8 @@ public class RegistryTest {
         Registry.instances(String.class).foreach(new Function<String, Unit>() {
             @Override
             public Unit apply(String t) {
+                Assert.assertNotNull(t);
+                Assert.assertEquals(2, t.length());
                 SimpleLogger.info(t);
                 return Unit.unit();
             }
@@ -70,8 +72,49 @@ public class RegistryTest {
             @Override
             public Unit apply(BeanReference<String> t) {
                 SimpleLogger.info(t.optional().getOrElse("No value"));
+                Assert.assertTrue(t.optional().isDefined());
+                Assert.assertNotSame("No value", t.optional().getOrElse("No value"));
                 return Unit.unit();
             }
         });
+        Registry.instances().foreach(new Function<Object, Unit>() {
+            @Override
+            public Unit apply(Object t) {
+                Assert.assertNotNull(t);
+                Assert.assertEquals(2, t.toString().length());
+                SimpleLogger.info(t.toString());
+                return Unit.unit();
+            }
+        });
+        Registry.optionalReference(String.class).optional().map(new Action<String>() {
+
+            @Override
+            public void apply(String t) {
+                Assert.assertNotNull(t);
+                Assert.assertEquals(2, t.length());
+                SimpleLogger.info(t);
+            }
+        });
+        Registry.reference(String.class).map(new Action<BeanReference<String>>() {
+
+            @Override
+            public void apply(BeanReference<String> t) {
+                Assert.assertTrue(t.optional().isDefined());
+                Assert.assertNotSame("No value", t.optional().getOrElse("No value"));
+                SimpleLogger.info(t.optional().getOrElse("No value"));            
+            }
+        });
+        Registry.references().foreach(new Function<BeanReference<?>, Unit>() {
+
+            @Override
+            public Unit apply(BeanReference<?> t) {
+                Assert.assertTrue(t.optional().isDefined());
+                SimpleLogger.info(t.optional().get().toString());
+                return Unit.unit();
+            }
+        });
+        string1.unregister();
+        string2.unregister();
+        string3.unregister();
     }
 }

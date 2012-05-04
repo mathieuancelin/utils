@@ -18,6 +18,7 @@
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.Option;
+import java.util.Collections;
 
 /**
  * Pattern matching for Java (with more or less verbose).
@@ -269,5 +270,49 @@ public final class M {
                 return Option.some(o);
             }
         };
+    }
+    
+        
+    public static <K> Option<K> caseClassOf(final Class<K> clazz, Object o) {
+        if (clazz.isInstance(o)) {
+            return Option.some(clazz.cast(o));
+        }
+        return Option.none();
+    }
+    
+    public static Option<String> caseStringEquals(Object o, String value) {
+        for (String s : caseClassOf(String.class, o)) {
+            if (s.equals(value)) {
+                return Option.some(s);
+            }
+        }
+        return Option.none();
+    }
+    
+    public static Option<String> caseStringMatch(Object o, String regex) {
+        for (String s : caseClassOf(String.class, o)) {
+            if (s.matches(regex)) {
+                return Option.some(s);
+            }
+        }
+        return Option.none();
+    }
+    
+    public static Option<String> caseStringContains(Object o, String value) {
+        for (String s : caseClassOf(String.class, o)) {
+            if (s.contains(value)) {
+                return Option.some(s);
+            }
+        }
+        return Option.none();
+    }
+    
+    public static Option<String> caseStringStartWith(Object o, String value) {
+        for (String s : caseClassOf(String.class, o)) {
+            if (s.startsWith(value)) {
+                return Option.some(s);
+            }
+        }
+        return Option.none();
     }
 }
