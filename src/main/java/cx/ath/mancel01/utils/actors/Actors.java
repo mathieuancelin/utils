@@ -54,6 +54,9 @@ public class Actors {
 
         @Override
         public Effect apply(Object message, Context ctx) {
+            if (message instanceof Poison) {
+                return CONTINUE;
+            }
             System.out.println("Dropping message [" + message + "] from [" + ctx.from.id() + "] to [" + ctx.to + "] due to severe case of death.");
             return CONTINUE;
         }
