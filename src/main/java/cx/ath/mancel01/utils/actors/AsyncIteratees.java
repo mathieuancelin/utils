@@ -31,7 +31,15 @@ public class AsyncIteratees {
     }
     
     public static abstract class Iteratee<I, O> implements Behavior {
-        public abstract Promise<O> getAsyncResult();
+        protected Promise<O> promise = new Promise<O>();
+        public Effect done(O result, Context ctx) {
+            promise.apply(result);
+            ctx.from.tell(Done.INSTANCE, ctx.me);
+            return Actors.DIE;
+        }
+        public Promise<O> getAsyncResult() {
+            return promise;
+        }
     }
     
     public static abstract class Enumerator<I> implements Behavior {

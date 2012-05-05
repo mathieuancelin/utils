@@ -5,11 +5,9 @@ import cx.ath.mancel01.utils.F;
 import cx.ath.mancel01.utils.F.Option;
 import cx.ath.mancel01.utils.F.Unit;
 import cx.ath.mancel01.utils.M;
-import cx.ath.mancel01.utils.actors.Actors;
 import cx.ath.mancel01.utils.actors.Actors.Context;
 import cx.ath.mancel01.utils.actors.Actors.Effect;
 import cx.ath.mancel01.utils.actors.AsyncIteratees.Cont;
-import cx.ath.mancel01.utils.actors.AsyncIteratees.Done;
 import cx.ath.mancel01.utils.actors.AsyncIteratees.EOF;
 import cx.ath.mancel01.utils.actors.AsyncIteratees.Elem;
 import cx.ath.mancel01.utils.actors.AsyncIteratees.Enumerator;
@@ -61,16 +59,6 @@ public class AsyncIterateeTest {
     public static class ListIteratee extends Iteratee<String, String> {
         
         private StringBuilder builder = new StringBuilder();
-        private final Promise<String> promise;
-
-        public ListIteratee() {
-            this.promise = new Promise<String>();
-        }
-
-        @Override
-        public Promise<String> getAsyncResult() {
-            return promise;
-        }
 
         @Override
         public Effect apply(Object msg, Context ctx) {
@@ -82,9 +70,7 @@ public class AsyncIterateeTest {
                 ctx.from.tell(Cont.INSTANCE, ctx.me);
             }
             for (EOF e : M.caseClassOf(EOF.class, msg)) {
-                promise.apply(builder.toString());
-                ctx.from.tell(Done.INSTANCE, ctx.me); 
-                return Actors.DIE;
+                return done(builder.toString(), ctx);
             }
             return Actors.CONTINUE;
         }
@@ -93,16 +79,9 @@ public class AsyncIterateeTest {
     public static class LongIteratee extends Iteratee<Long, Unit> {
         
         private final CountDownLatch latch;
-        private final Promise<Unit> promise;
 
         public LongIteratee(CountDownLatch latch) {
             this.latch = latch;
-            this.promise = new Promise<Unit>();
-        }
-
-        @Override
-        public Promise<Unit> getAsyncResult() {
-            return promise;
         }
 
         @Override
@@ -111,9 +90,7 @@ public class AsyncIterateeTest {
                 Elem<Long> el = (Elem<Long>) e;
                 for (Long l : el.get()) {
                     if (l > 500) {
-                        promise.apply(Unit.unit());
-                        ctx.from.tell(Done.INSTANCE, ctx.me);
-                        return Actors.DIE;
+                        return done(Unit.unit(), ctx);
                     }
                     System.out.println(l);
                     latch.countDown();
