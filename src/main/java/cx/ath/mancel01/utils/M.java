@@ -272,7 +272,6 @@ public final class M {
         };
     }
     
-        
     public static <K> Option<K> caseClassOf(final Class<K> clazz, Object o) {
         if (clazz.isInstance(o)) {
             return Option.some(clazz.cast(o));

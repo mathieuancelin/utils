@@ -1,44 +1,57 @@
 package cx.ath.mancel01.utils;
 
-import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.Concurrent.Promise;
+import cx.ath.mancel01.utils.F.Option;
 import cx.ath.mancel01.utils.F.Unit;
+import cx.ath.mancel01.utils.actors.Actors.Context;
+import cx.ath.mancel01.utils.actors.Actors.Effect;
 import cx.ath.mancel01.utils.Iteratees.Cont;
-import cx.ath.mancel01.utils.Iteratees.Done;
-import cx.ath.mancel01.utils.Iteratees.El;
 import cx.ath.mancel01.utils.Iteratees.EOF;
-import cx.ath.mancel01.utils.Iteratees.Input;
-import cx.ath.mancel01.utils.Iteratees.Iteratee;
+import cx.ath.mancel01.utils.Iteratees.Elem;
 import cx.ath.mancel01.utils.Iteratees.Enumerator;
-import cx.ath.mancel01.utils.Iteratees.IterateeException;
-import cx.ath.mancel01.utils.Iteratees.Output;
+import cx.ath.mancel01.utils.Iteratees.Iteratee;
+import cx.ath.mancel01.utils.actors.Actors;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import junit.framework.Assert;
 import org.junit.Test;
 
 public class IterateeTest {
     
     @Test
-    public void testIterateeOnList() {
-        CountDownLatch latch = new CountDownLatch(1);
+    public void testIterateeOnList() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
         List<String> list = Arrays.asList(new String[]{"Mathieu", "Kevin", "Jeremy"});
-        for (String s : new ListEnumerator<String>(list)
-                    .applyOn(new ListIteratee())) {
-            System.out.println(s);
-            Assert.assertEquals(s, "MathieuKevinJeremy");
-            latch.countDown();
-        }
+        Promise<String> promise = new ListEnumerator<String>(list)
+                    .applyOn(new ListIteratee());
+        promise.onRedeem(new F.Action<Promise<String>>() {
+            @Override
+            public void apply(Promise<String> t) {
+                try {
+                    System.out.println(t.get());
+                    Assert.assertEquals(t.get(), "MathieuKevinJeremy");
+                    latch.countDown();
+                } catch (Exception ex) {}
+            }
+        });  
+        latch.await(10, TimeUnit.SECONDS);
         Assert.assertEquals(0, latch.getCount());
     }
     
     @Test
-    public void testIterateeOnLong() {
-        CountDownLatch latch = new CountDownLatch(501);
-        for (Unit u : new LongEnumerator().applyOn(new LongIteratee(latch))) {
-            latch.countDown();
-        }
+    public void testIterateeOnLong() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(501);
+        Promise<Unit> promise = new LongEnumerator().applyOn(new LongIteratee(latch));
+        promise.onRedeem(new F.Action<Promise<Unit>>() {
+            @Override
+            public void apply(Promise<Unit> t) {
+                latch.countDown();
+            }
+        });
+        latch.await(10, TimeUnit.SECONDS);
         Assert.assertEquals(0, latch.getCount());
     }
 
@@ -47,29 +60,18 @@ public class IterateeTest {
         private StringBuilder builder = new StringBuilder();
 
         @Override
-        public String get() {
-            return builder.toString();
-        }
-
-        @Override
-        public Function<Input<String>, Output<String, String>> handler() {
-            return new Function<Input<String>, Output<String, String>>() {
-
-                @Override
-                public Output<String, String> apply(Input<String> input) {
-                    for (El e : M.caseClassOf(El.class, input)) {
-                        El<String> el = (El<String>) e;
-                        for (String s : el.get()) {
-                            builder.append(s);
-                        }
-                        return new Cont<String, String>(this);
-                    }
-                    for (EOF e : M.caseClassOf(EOF.class, input)) {
-                        return new Done<String, String>(builder.toString());
-                    }
-                    throw new IterateeException("Something went wrong"); 
+        public Effect apply(Object msg, Context ctx) {
+            for (Elem e : M.caseClassOf(Elem.class, msg)) {
+                Elem<String> el = (Elem<String>) e;
+                for (String s : el.get()) {
+                    builder.append(s);
                 }
-            };
+                ctx.from.tell(Cont.INSTANCE, ctx.me);
+            }
+            for (EOF e : M.caseClassOf(EOF.class, msg)) {
+                return done(builder.toString(), ctx);
+            }
+            return Actors.CONTINUE;
         }
     }
     
@@ -82,29 +84,19 @@ public class IterateeTest {
         }
 
         @Override
-        public Unit get() {
-            return Unit.unit();
-        }
-
-        @Override
-        public Function<Input<Long>, Output<Long, Unit>> handler() {
-            return new Function<Input<Long>, Output<Long, Unit>>() {
-                @Override
-                public Output<Long, Unit> apply(Input<Long> input) {
-                    for (El e : M.caseClassOf(El.class, input)) {
-                        El<Long> el = (El<Long>) e;
-                        for (Long l : el.get()) {
-                            if (l > 500) {
-                                return new Done<Long, Unit>(Unit.unit());
-                            }
-                            System.out.println(l);
-                            latch.countDown();
-                        }
-                        return new Cont<Long, Unit>(this);
+        public Effect apply(Object msg, Context ctx) {
+            for (Elem e : M.caseClassOf(Elem.class, msg)) {
+                Elem<Long> el = (Elem<Long>) e;
+                for (Long l : el.get()) {
+                    if (l > 500) {
+                        return done(Unit.unit(), ctx);
                     }
-                    throw new RuntimeException("Something went wrong");    
+                    System.out.println(l);
+                    latch.countDown();
                 }
-            };            
+                ctx.from.tell(Cont.INSTANCE, ctx.me);
+            }
+            return Actors.CONTINUE;
         }
     }
     
@@ -114,21 +106,29 @@ public class IterateeTest {
             it = names.iterator();
         }
         @Override
-        public Input<T> next() {
-            if (it.hasNext()) {
-                return new Iteratees.El<T>(it.next());
-            } else {
-                return new EOF<T>();
-            }
+        public Option<T> next() {
+            T obj = null;
+            try {
+                obj = it.next();
+            } catch (Exception e) { e.printStackTrace(); }
+            return Option.apply(obj);
+        }
+        @Override
+        public boolean hasNext() {
+            return it.hasNext();
         }
     }
     
     public static class LongEnumerator extends Enumerator<Long> {
         private Long current = 0L;
         @Override
-        public Input<Long> next() {
+        public Option<Long> next() {
             current = current + 1L;
-            return new El<Long>(current);
+            return Option.some(current);
+        }
+        @Override
+        public boolean hasNext() {
+            return (current < Long.MAX_VALUE);
         }
     }
 }

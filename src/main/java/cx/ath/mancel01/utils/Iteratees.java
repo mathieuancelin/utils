@@ -1,121 +1,89 @@
 package cx.ath.mancel01.utils;
 
-import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.Concurrent.Promise;
 import cx.ath.mancel01.utils.F.Option;
+import cx.ath.mancel01.utils.actors.Actors;
+import cx.ath.mancel01.utils.actors.Actors.Actor;
+import cx.ath.mancel01.utils.actors.Actors.ActorContext;
+import cx.ath.mancel01.utils.actors.Actors.Behavior;
+import cx.ath.mancel01.utils.actors.Actors.Context;
+import cx.ath.mancel01.utils.actors.Actors.Effect;
+import cx.ath.mancel01.utils.actors.Actors.Poison;
+import java.util.UUID;
 
-// enumerator sends El, Empty and EOF
-// iteratee sends Done, Error, Cont(handler)
 public class Iteratees {
     
-    public static interface Input<I> {
-        Option<I> get();
-    }    
-    public static final class El<I> implements Input<I> {
+    public static final class Elem<I> {
         private final I e;
-        public El(I e) {
-            this.e = e;
-        }
-        @Override
-        public Option<I> get() {
-            return Option.apply(e);
-        }
+        public Elem(I e) { this.e = e; }
+        public Option<I> get() { return Option.apply(e); }
     }
-    public static class EOF<I> implements Input<I> {
-        @Override
-        public Option<I> get() {
-            return Option.none();
-        }
-    }
-    public static class Empty<I> implements Input<I> {
-        @Override
-        public Option<I> get() {
-            return Option.none();
+    public static enum EOF { INSTANCE }
+    public static enum Empty { INSTANCE }
+    private static enum Run { INSTANCE }
+    public static enum Done { INSTANCE }
+    public static enum Cont { INSTANCE }
+    public static final class Error<E> {
+        public final E error;
+        public Error(E error) {
+            this.error = error;
         }
     }
     
-    public static interface Output<I, O> {
-        Option<Function<Input<I>,Output<I, O>>> get();
+    public static abstract class Iteratee<I, O> implements Behavior {
+        protected Promise<O> promise = new Promise<O>();
+        public Effect done(O result, Context ctx) {
+            promise.apply(result);
+            ctx.from.tell(Done.INSTANCE, ctx.me);
+            return Actors.DIE;
+        }
+        public Promise<O> getAsyncResult() {
+            return promise;
+        }
     }
     
-    
-    public static final class Done<I, O> implements Output<I, O> {
-        
-        private final O o;
-
-        public Done(O o) {
-            this.o = o;
-        }
-        
-        public Option<O> result() {
-            return Option.apply(o);
-        }
-
+    public static abstract class Enumerator<I> implements Behavior {
         @Override
-        public Option<Function<Input<I>, Output<I, O>>> get() {
-            return Option.none();
+        public Effect apply(Object msg, Context ctx) {
+            for (Run run : M.caseClassOf(Run.class, msg)) {
+                sendNext(msg, ctx);
+            }
+            for (Cont cont : M.caseClassOf(Cont.class, msg)) {
+                sendNext(msg, ctx);
+            }
+            for (Done done : M.caseClassOf(Done.class, msg)) {
+                ctx.from.tell(Poison.PILL, ctx.me);
+                return Actors.DIE;
+            }
+            for (Error err : M.caseClassOf(Error.class, msg)) {
+                ctx.from.tell(Poison.PILL, ctx.me);
+                System.err.println(err.error);
+                return Actors.DIE;            
+            }
+            return Actors.CONTINUE;
         }
-    }
-    public static final class Error<I, O> implements Output<I, O> {
-        @Override
-        public Option<Function<Input<I>, Output<I, O>>> get() {
-            return Option.none();
-        }
-    }
-    public static final class Cont<I, O> implements Output<I, O> {
-        private final Option<Function<Input<I>, Output<I, O>>> handler;
-        public Cont(Function<Input<I>, Output<I, O>> handler) {
-            this.handler = Option.apply(handler);
-        }
-        @Override
-        public Option<Function<Input<I>, Output<I, O>>> get() {
-            return handler;
-        }
-    }
-    
-    public static abstract class Iteratee<I,O> {
-                        
-        public abstract Function<Input<I>, Output<I, O>> handler();
-        
-        public abstract O get();
-    }    
-    
-    public static abstract class Enumerator<I> {
-                
-        public <O> Option<O> applyOn(Iteratee<I, O> iteratee) {
-            Function<Input<I>, Output<I, O>> handler = iteratee.handler();
-            Output<I, O> out = new Cont<I, O>(handler);
-            while(out.getClass().equals(Cont.class)) {
-                out = handler.apply(next());
-                if (out instanceof Cont) {
-                    for (Function<Input<I>, Output<I, O>> h : 
-                            ((Cont<I, O>) out).get()) {
-                        handler = h;
-                    }
+        private void sendNext(Object msg, Context ctx) {
+            if (!hasNext()) {
+                ctx.from.tell(EOF.INSTANCE, ctx.me);
+            } else {
+                Option<I> optElemnt = next();
+                for (I element : optElemnt) {
+                    ctx.from.tell(new Elem<I>(element), ctx.me);
+                }
+                if (optElemnt.isEmpty()) {
+                    ctx.from.tell(Empty.INSTANCE, ctx.me);
                 }
             }
-            for (Done done : M.caseClassOf(Done.class, out)) {
-                Done<I,O> d = (Done<I,O>) done;
-                return d.result();
-            }
-            for (Empty error : M.caseClassOf(Empty.class, out)) {
-                return Option.none();
-            }
-            throw new IterateeException("Something went wrong");
         }
-        
-        public abstract Input<I> next();
-    }
-    
-    public static class IterateeException extends RuntimeException {
-        public IterateeException() {}
-        public IterateeException(String string) {
-            super(string);
+        public abstract boolean hasNext();
+        public abstract Option<I> next();
+        public <O> Promise<O> applyOn(Iteratee<I, O> it) {
+            Promise<O> res = it.getAsyncResult();
+            ActorContext context = Actors.newContext();
+            Actor enumerator = context.create(this, UUID.randomUUID().toString());
+            Actor iteratee = context.create(it, UUID.randomUUID().toString());
+            enumerator.tell(Run.INSTANCE, iteratee);
+            return res;
         }
-        public IterateeException(Throwable thrwbl) {
-            super(thrwbl);
-        }
-        public IterateeException(String string, Throwable thrwbl) {
-            super(string, thrwbl);
-        }
-    }
+    }    
 }
