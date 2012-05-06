@@ -57,7 +57,7 @@ public class Actors {
             if (message instanceof Poison) {
                 return CONTINUE;
             }
-            System.out.println("Dropping message [" + message + "] from [" + ctx.from.id() + "] to [" + ctx.to + "] due to severe case of death.");
+            System.out.println("Dropping message [" + message.getClass().getSimpleName() + ", "+ message + "] from [" + ctx.from.id() + "] to [" + ctx.to + "] due to severe case of death.");
             return CONTINUE;
         }
 

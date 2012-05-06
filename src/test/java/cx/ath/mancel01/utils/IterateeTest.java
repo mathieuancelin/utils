@@ -145,7 +145,7 @@ public class IterateeTest {
         Assert.assertEquals(0, latch.getCount());
     }
     
-    //@Test
+    @Test
     public void testPushEnumeratorSched() throws Exception {
         final CountDownLatch latch = new CountDownLatch(10);
         PushEnumerator<String> pushEnum = Enumerator.fromCallback(1, TimeUnit.SECONDS, 

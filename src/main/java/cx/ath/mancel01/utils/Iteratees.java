@@ -18,6 +18,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class Iteratees {
@@ -125,12 +127,21 @@ public class Iteratees {
         }
         public static <T> PushEnumerator<T> fromCallback(long every, TimeUnit unit, final Function<Unit, Option<T>> callback) {
             final PushEnumerator<T> pushEnum = new PushEnumerator<T>();
-            Actors.newContext().schedule(every, unit, new Runnable() {
+            final ActorContext ctx = Actors.newContext();
+            final ExecutorService exec = Executors.newCachedThreadPool();
+            ctx.schedule(every, unit, new Runnable() {
                 @Override
                 public void run() {
                     Option<T> opt = callback.apply(Unit.unit());
                     for (T elem : opt) {
-                        pushEnum.push(elem);
+                        final T el = elem;
+                        Runnable r = new Runnable() {
+                            @Override
+                            public void run() {
+                                pushEnum.push(el);
+                            }
+                        };
+                        exec.execute(r);
                     }
                 }
             });
@@ -359,13 +370,14 @@ public class Iteratees {
         }
         public void push(T elem) {
             pushQueue.offer(elem);
-            Option<T> optElemnt = next();
+            enumerator.tell(Cont.INSTANCE, iteratee);
+            /**Option<T> optElemnt = next();
             for (T element : optElemnt) {
                 iteratee.tell(new Elem<T>(element), enumerator);
             }
             if (optElemnt.isEmpty()) {
                 iteratee.tell(Empty.INSTANCE, enumerator);
-            }
+            }**/
         }
         public void stop() {
             hasnext = false;
