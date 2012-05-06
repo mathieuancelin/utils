@@ -187,7 +187,7 @@ public class UtilsTest implements Utils {
         Assert.assertEquals(expected, result);
     }
 
-    @Test
+    //@Test
     public void testParCollections() {
         Collection<String> values = Arrays.asList(new String[]{"Hello", "dude", ",", "how", "are", "you", "today", "!"});
         Collection<String> expected = Arrays.asList(new String[]{"HELLO", "DUDE", ",", "HOW", "ARE", "YOU", "TODAY", "!"});
