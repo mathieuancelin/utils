@@ -51,7 +51,7 @@ public class Iteratees {
         public Promise<O> getAsyncResult() {
             return promise;
         }
-        public static <T> Iteratee<T, Unit> foreach(Function<T, Effect> func) {
+        public static <T> Iteratee<T, Unit> foreach(Function<T, Unit> func) {
             return new ForeachIteratee<T>(func);
         }
     }
@@ -96,8 +96,8 @@ public class Iteratees {
         public <O> Promise<O> applyOn(Iteratee<I, O> it) {
             Promise<O> res = it.getAsyncResult();
             ActorContext context = Actors.newContext();
-            enumerator = context.create(this, UUID.randomUUID().toString());
             iteratee = context.create(it, UUID.randomUUID().toString());
+            enumerator = context.create(this, UUID.randomUUID().toString());
             enumerator.tell(Run.INSTANCE, iteratee);
             return res;
         }
@@ -370,14 +370,11 @@ public class Iteratees {
         }
         public void push(T elem) {
             pushQueue.offer(elem);
-            enumerator.tell(Cont.INSTANCE, iteratee);
-            /**Option<T> optElemnt = next();
-            for (T element : optElemnt) {
-                iteratee.tell(new Elem<T>(element), enumerator);
-            }
-            if (optElemnt.isEmpty()) {
-                iteratee.tell(Empty.INSTANCE, enumerator);
-            }**/
+            try {
+                if (enumerator != null) {
+                    enumerator.tell(Cont.INSTANCE, iteratee);
+                }
+            } catch (Exception e) { e.printStackTrace(); }
         }
         public void stop() {
             hasnext = false;
@@ -386,8 +383,8 @@ public class Iteratees {
         }
     } 
     public static class ForeachIteratee<T> extends Iteratee<T, Unit> {
-        private final Function<T, Effect> func;
-        public ForeachIteratee(Function<T, Effect> func) {
+        private final Function<T, Unit> func;
+        public ForeachIteratee(Function<T, Unit> func) {
             this.func = func;
         }
         @Override
@@ -395,10 +392,7 @@ public class Iteratees {
             for (Elem e : M.caseClassOf(Elem.class, msg)) {
                 Elem<T> el = (Elem<T>) e;
                 for (T elem : el.get()) { 
-                   Effect effect = func.apply(elem);
-                   if (effect.equals(Actors.DIE)) {
-                       return done(Unit.unit(), ctx);
-                   }
+                   func.apply(elem);
                 }
                 ctx.from.tell(Cont.INSTANCE, ctx.me);
             }

@@ -2,6 +2,7 @@ package cx.ath.mancel01.utils.actors;
 
 import cx.ath.mancel01.utils.F.F2;
 import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.SimpleLogger;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
@@ -57,7 +58,11 @@ public class Actors {
             if (message instanceof Poison) {
                 return CONTINUE;
             }
-            System.out.println("Dropping message [" + message.getClass().getSimpleName() + ", "+ message + "] from [" + ctx.from.id() + "] to [" + ctx.to + "] due to severe case of death.");
+            SimpleLogger.trace("Dropping message [{}, {}] from [{}] to [{}] due to severe case of death."
+                    , message.getClass().getSimpleName()
+                    , message
+                    , ctx.from.id()
+                    , ctx.to);
             return CONTINUE;
         }
 
@@ -103,7 +108,7 @@ public class Actors {
         
             @Override
             public void tell(Object message) {
-                System.out.println("Message received in actor sink : " + message.toString());
+                SimpleLogger.trace("Message received in actor sink : {}", message.toString());
             }
             @Override
             public void tell(Object message, Actor from) { tell(message); }
