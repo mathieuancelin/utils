@@ -101,7 +101,29 @@ public class Iteratees {
             enumerator.tell(Run.INSTANCE, iteratee);
             return res;
         }
-        
+        public Enumerator<I> andThen(final Enumerator<I> then) {
+            final Enumerator<I> and = this;
+            return new Enumerator<I>() {
+                @Override
+                public boolean hasNext() {
+                    if (!and.hasNext()) {
+                        return then.hasNext();
+                    } else {
+                        return and.hasNext();
+                    }
+                }
+                @Override
+                public Option<I> next() {
+                    if (!and.hasNext()) {
+                        return then.next();
+                    } else {
+                        return and.next();
+                    }
+                }
+            };
+        }
+        // interleave
+        // through(enumeratee)        
         public static <T> Enumerator<T> of(T... args) {
             return new IterableEnumerator(Arrays.asList(args));
         }
