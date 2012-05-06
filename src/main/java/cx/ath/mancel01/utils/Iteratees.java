@@ -100,24 +100,24 @@ public class Iteratees {
             return res;
         }
         
-        public static <T> Enumerator of(T... args) {
+        public static <T> Enumerator<T> of(T... args) {
             return new IterableEnumerator(Arrays.asList(args));
         }
         
-        public static <T> Enumerator of(Iterable<T> iterable) {
+        public static <T> Enumerator<T> of(Iterable<T> iterable) {
             return new IterableEnumerator(iterable);
         }
-        public static <T> Enumerator fromStream(InputStream is, int chunkSize) {
+        public static <T> Enumerator<Byte[]> fromStream(InputStream is, int chunkSize) {
             return new FromInputStreamEnumerator(is, chunkSize);
         }
-        public static <T> Enumerator fromFile(File f, int chunkSize) {
+        public static <T> Enumerator<Byte[]> fromFile(File f, int chunkSize) {
             try {
                 return new FromInputStreamEnumerator(new FileInputStream(f), chunkSize);
             } catch (FileNotFoundException ex) {
                 throw new RuntimeException(ex);
             }
         }
-        public static <T> Enumerator fromFileLines(File f) {
+        public static <T> Enumerator<String> fromFileLines(File f) {
             return new FromFileLinesEnumerator(f);
         }
         public static <T> PushEnumerator<T> push(Class<T> clazz) {
@@ -281,7 +281,11 @@ public class Iteratees {
                 if (numRead == -1) {
                     close();
                 } else {
-                    System.arraycopy(bytes, 0, copy, 0, numRead);
+                    int i = 0;
+                    for (byte b : bytes) {
+                        copy[i] = b;
+                        i++;
+                    }
                 }
             } catch (Exception e) { 
                 e.printStackTrace(); 
@@ -290,6 +294,7 @@ public class Iteratees {
             return Option.some(copy);
         }
         private void close() {
+            //System.out.println("Closing IS");
             hasnext = false;
             try {
                 is.close();
@@ -318,7 +323,7 @@ public class Iteratees {
         public Option<String> next() {
             String strLine = null;
             try {
-                br.readLine();
+                strLine = br.readLine();
             } catch(Exception e) { e.printStackTrace(); }
             if (strLine == null) {
                 close();

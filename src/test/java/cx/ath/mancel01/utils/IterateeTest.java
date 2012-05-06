@@ -5,6 +5,7 @@ import cx.ath.mancel01.utils.F.Action;
 import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Option;
 import cx.ath.mancel01.utils.F.Unit;
+import cx.ath.mancel01.utils.Iteratees.CharacterEnumerator;
 import cx.ath.mancel01.utils.actors.Actors.Context;
 import cx.ath.mancel01.utils.actors.Actors.Effect;
 import cx.ath.mancel01.utils.Iteratees.Cont;
@@ -15,6 +16,7 @@ import cx.ath.mancel01.utils.Iteratees.Iteratee;
 import cx.ath.mancel01.utils.Iteratees.LongEnumerator;
 import cx.ath.mancel01.utils.Iteratees.PushEnumerator;
 import cx.ath.mancel01.utils.actors.Actors;
+import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import junit.framework.Assert;
@@ -52,7 +54,7 @@ public class IterateeTest {
                     return Actors.DIE;
                 } else {
                     latch.countDown();
-                    System.out.println(l);
+                    //System.out.println(l);
                     return Actors.CONTINUE;
                 }
             }
@@ -67,6 +69,54 @@ public class IterateeTest {
         latch2.await(5, TimeUnit.SECONDS);
         Assert.assertEquals(0, latch.getCount());
         Assert.assertEquals(0, latch2.getCount());
+    }
+    
+    @Test
+    public void testIterateeOnChar() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(Character.MAX_VALUE);
+        Promise<Unit> promise = new CharacterEnumerator().applyOn(Iteratee.foreach(new Function<Character, Effect>() {
+            @Override
+            public Effect apply(Character l) {
+                latch.countDown();
+                return Actors.CONTINUE;
+            }
+        }));
+        latch.await();
+        Assert.assertEquals(0, latch.getCount());
+    }
+    
+    @Test
+    public void testFileEnumerator() throws Exception {
+        Enumerator<Byte[]> fileEnum = Enumerator.fromFile(new File("src/main/java/cx/ath/mancel01/utils/Registry.java"), 1024);
+        Promise<Unit> promise = fileEnum.applyOn(Iteratee.foreach(new Function<Byte[], Effect>() {
+            @Override
+            public Effect apply(Byte[] t) {
+                byte[] bytes = new byte[t.length];
+                try {
+                    int i = 0;
+                    for (Byte b : t) {
+                        bytes[i] = b;
+                        i++;
+                    }
+                } catch (Exception e) {}
+                //System.out.println(new String(bytes));
+                return Actors.CONTINUE;
+            }
+        }));
+        promise.get();
+    }
+    
+    @Test
+    public void testFileLineEnumerator() throws Exception {
+        Enumerator<String> fileEnum = Enumerator.fromFileLines(new File("src/main/java/cx/ath/mancel01/utils/Registry.java"));
+        Promise<Unit> promise = fileEnum.applyOn(Iteratee.foreach(new Function<String, Effect>() {
+            @Override
+            public Effect apply(String t) {
+                //System.out.println(t);
+                return Actors.CONTINUE;
+            }
+        }));
+        promise.get();
     }
     
     @Test
