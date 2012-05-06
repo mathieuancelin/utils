@@ -1,6 +1,8 @@
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.Concurrent.Promise;
+import cx.ath.mancel01.utils.F.Action;
+import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Option;
 import cx.ath.mancel01.utils.F.Unit;
 import cx.ath.mancel01.utils.actors.Actors.Context;
@@ -10,10 +12,9 @@ import cx.ath.mancel01.utils.Iteratees.EOF;
 import cx.ath.mancel01.utils.Iteratees.Elem;
 import cx.ath.mancel01.utils.Iteratees.Enumerator;
 import cx.ath.mancel01.utils.Iteratees.Iteratee;
+import cx.ath.mancel01.utils.Iteratees.LongEnumerator;
+import cx.ath.mancel01.utils.Iteratees.PushEnumerator;
 import cx.ath.mancel01.utils.actors.Actors;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import junit.framework.Assert;
@@ -24,10 +25,9 @@ public class IterateeTest {
     @Test
     public void testIterateeOnList() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        List<String> list = Arrays.asList(new String[]{"Mathieu", "Kevin", "Jeremy"});
-        Promise<String> promise = new ListEnumerator<String>(list)
+        Promise<String> promise = Enumerator.of("Mathieu", "Kevin", "Jeremy")
                     .applyOn(new ListIteratee());
-        promise.onRedeem(new F.Action<Promise<String>>() {
+        promise.onRedeem(new Action<Promise<String>>() {
             @Override
             public void apply(Promise<String> t) {
                 try {
@@ -43,15 +43,79 @@ public class IterateeTest {
     
     @Test
     public void testIterateeOnLong() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(501);
-        Promise<Unit> promise = new LongEnumerator().applyOn(new LongIteratee(latch));
-        promise.onRedeem(new F.Action<Promise<Unit>>() {
+        final CountDownLatch latch = new CountDownLatch(500);
+        final CountDownLatch latch2 = new CountDownLatch(1);
+        Promise<Unit> promise = new LongEnumerator().applyOn(Iteratee.foreach(new Function<Long, Effect>() {
+            @Override
+            public Effect apply(Long l) {
+                if (l > 500) {
+                    return Actors.DIE;
+                } else {
+                    latch.countDown();
+                    System.out.println(l);
+                    return Actors.CONTINUE;
+                }
+            }
+        }));
+        promise.onRedeem(new Action<Promise<Unit>>() {
             @Override
             public void apply(Promise<Unit> t) {
-                latch.countDown();
+                latch2.countDown();
             }
         });
         latch.await(10, TimeUnit.SECONDS);
+        latch2.await(5, TimeUnit.SECONDS);
+        Assert.assertEquals(0, latch.getCount());
+        Assert.assertEquals(0, latch2.getCount());
+    }
+    
+    @Test
+    public void testPushEnumerator() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(5);
+        PushEnumerator<String> pushEnum = Enumerator.push(String.class);
+        pushEnum.applyOn(Iteratee.foreach(new Function<String, Effect>() {
+            @Override
+            public Effect apply(String t) {
+                System.out.println(t);
+                latch.countDown();
+                return Actors.CONTINUE;
+            }
+        }));
+        pushEnum.push("Hello dude");
+        Thread.sleep(1000);
+        pushEnum.push("Hello dude");
+        Thread.sleep(2000);
+        pushEnum.push("Hello dude");
+        Thread.sleep(500);
+        pushEnum.push("Hello dude");
+        Thread.sleep(1000);
+        pushEnum.push("Hello dude");
+        latch.await();
+        pushEnum.stop();
+        Assert.assertEquals(0, latch.getCount());
+    }
+    
+    //@Test
+    public void testPushEnumeratorSched() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(10);
+        PushEnumerator<String> pushEnum = Enumerator.fromCallback(1, TimeUnit.SECONDS, 
+                new Function<Unit, Option<String>>() {
+            @Override
+            public Option<String> apply(Unit t) {
+                latch.countDown();
+                return Option.some("Hello dude");
+            } 
+        });
+        pushEnum.applyOn(Iteratee.foreach(new Function<String, Effect>() {
+            @Override
+            public Effect apply(String t) {
+                System.out.println(t);
+                latch.countDown();
+                return Actors.CONTINUE;
+            }
+        }));
+        latch.await(10, TimeUnit.SECONDS);
+        pushEnum.stop();
         Assert.assertEquals(0, latch.getCount());
     }
 
@@ -72,63 +136,6 @@ public class IterateeTest {
                 return done(builder.toString(), ctx);
             }
             return Actors.CONTINUE;
-        }
-    }
-    
-    public static class LongIteratee extends Iteratee<Long, Unit> {
-        
-        private final CountDownLatch latch;
-
-        public LongIteratee(CountDownLatch latch) {
-            this.latch = latch;
-        }
-
-        @Override
-        public Effect apply(Object msg, Context ctx) {
-            for (Elem e : M.caseClassOf(Elem.class, msg)) {
-                Elem<Long> el = (Elem<Long>) e;
-                for (Long l : el.get()) {
-                    if (l > 500) {
-                        return done(Unit.unit(), ctx);
-                    }
-                    System.out.println(l);
-                    latch.countDown();
-                }
-                ctx.from.tell(Cont.INSTANCE, ctx.me);
-            }
-            return Actors.CONTINUE;
-        }
-    }
-    
-    public static class ListEnumerator<T> extends Enumerator<T> {
-        private final Iterator<T> it;
-        public ListEnumerator(List<T> names) {
-            it = names.iterator();
-        }
-        @Override
-        public Option<T> next() {
-            T obj = null;
-            try {
-                obj = it.next();
-            } catch (Exception e) { e.printStackTrace(); }
-            return Option.apply(obj);
-        }
-        @Override
-        public boolean hasNext() {
-            return it.hasNext();
-        }
-    }
-    
-    public static class LongEnumerator extends Enumerator<Long> {
-        private Long current = 0L;
-        @Override
-        public Option<Long> next() {
-            current = current + 1L;
-            return Option.some(current);
-        }
-        @Override
-        public boolean hasNext() {
-            return (current < Long.MAX_VALUE);
         }
     }
 }
