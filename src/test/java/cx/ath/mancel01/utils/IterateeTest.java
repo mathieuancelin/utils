@@ -14,7 +14,6 @@ import cx.ath.mancel01.utils.Iteratees.Elem;
 import cx.ath.mancel01.utils.Iteratees.Enumeratee;
 import cx.ath.mancel01.utils.Iteratees.Enumerator;
 import cx.ath.mancel01.utils.Iteratees.Iteratee;
-import cx.ath.mancel01.utils.Iteratees.LongEnumerator;
 import cx.ath.mancel01.utils.Iteratees.PushEnumerator;
 import cx.ath.mancel01.utils.actors.Actors;
 import java.io.File;
@@ -49,48 +48,30 @@ public class IterateeTest {
     public void testIterateeOnListThroughEnumeratee() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         Promise<String> promise = Enumerator.of("Mathieu", "Kevin", "Jeremy")
-                    .through(Enumeratee.map(new Function<String, String>() {
-                        @Override
-                        public String apply(String t) {
-                            return t.toUpperCase();
-                        }
-                    })).applyOn(new ListIteratee());
+            .through(Enumeratee.map(new Function<String, String>() {
+                @Override
+                public String apply(String t) {
+                    return t.toUpperCase();
+                }
+            }))./**through(Enumeratee.map(new Function<String, String>() {
+                @Override
+                public String apply(String t) {
+                    return t + " ===>> ";
+                }
+            })).**/applyOn(new ListIteratee());
         promise.onRedeem(new Action<Promise<String>>() {
             @Override
             public void apply(Promise<String> t) {
                 try {
                     System.out.println(t.get());
                     Assert.assertEquals(t.get(), "MATHIEUKEVINJEREMY");
+                    //Assert.assertEquals(t.get(), "MATHIEU ===>> KEVIN ===>> JEREMY ===>> ");
                     latch.countDown();
                 } catch (Exception ex) {}
             }
         });  
         latch.await(10, TimeUnit.SECONDS);
         Assert.assertEquals(0, latch.getCount());
-    }
-    
-    //@Test
-    public void testIterateeOnLong() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(500);
-        final CountDownLatch latch2 = new CountDownLatch(1);
-        Promise<Unit> promise = new LongEnumerator().applyOn(Iteratee.foreach(new Function<Long, Unit>() {
-            @Override
-            public Unit apply(Long l) {
-                latch.countDown();
-                //System.out.println(l);
-                return Unit.unit();
-            }
-        }));
-        promise.onRedeem(new Action<Promise<Unit>>() {
-            @Override
-            public void apply(Promise<Unit> t) {
-                latch2.countDown();
-            }
-        });
-        latch.await();
-        latch2.await();
-        Assert.assertEquals(0, latch.getCount());
-        Assert.assertEquals(0, latch2.getCount());
     }
     
     @Test
@@ -123,7 +104,6 @@ public class IterateeTest {
                     }
                 } catch (Exception e) {}
                 count.incrementAndGet();
-                //System.out.println(new String(bytes));
                 return Unit.unit();
             }
         }));
@@ -138,7 +118,6 @@ public class IterateeTest {
         Promise<Unit> promise = fileEnum.applyOn(Iteratee.foreach(new Function<String, Unit>() {
             @Override
             public Unit apply(String t) {
-                //System.out.println(t);
                 count.incrementAndGet();
                 return Unit.unit();
             }
@@ -170,6 +149,38 @@ public class IterateeTest {
         pushEnum.push("Hello dude");
         latch.await();
         pushEnum.stop();
+        Assert.assertEquals(0, latch.getCount());
+    }
+    
+    @Test
+    public void testInterleave() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(5);
+        PushEnumerator<String> pushEnum1 = Enumerator.push(String.class);
+        PushEnumerator<String> pushEnum2 = Enumerator.push(String.class);
+        PushEnumerator<String> pushEnum3 = Enumerator.push(String.class);
+        Enumerator<String> global = Enumerator.interleave(pushEnum1, pushEnum2, pushEnum3);
+        global.applyOn(Iteratee.foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                System.out.println(t);
+                latch.countDown();
+                return Unit.unit();
+            }
+        }));
+        Thread.sleep(1000);
+        pushEnum1.push("push1");
+        Thread.sleep(1000);
+        pushEnum2.push("push2");
+        Thread.sleep(1000);
+        pushEnum3.push("push3");
+        Thread.sleep(1000);
+        pushEnum2.push("push2");
+        Thread.sleep(1000);
+        pushEnum1.push("push1");
+        latch.await(7, TimeUnit.SECONDS);
+        pushEnum1.stop();
+        pushEnum2.stop();
+        pushEnum3.stop();
         Assert.assertEquals(0, latch.getCount());
     }
     

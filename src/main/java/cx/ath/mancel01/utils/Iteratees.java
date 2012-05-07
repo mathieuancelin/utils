@@ -14,13 +14,17 @@ import cx.ath.mancel01.utils.actors.Actors.Poison;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Iteratees {
     
@@ -123,10 +127,13 @@ public class Iteratees {
                 }
             };
         }
-        public <O> Enumerator<O> through(Enumeratee<I, O> enumeratee) {
+        public <O> Enumerator<O> through(Enumeratee<I, O> enumeratee) { // SHOULD WORK CHAINED
             return new DecoratedEnumerator<O>(this, enumeratee);
         }
         // interleave
+        public static <T> Enumerator<T> interleave(Enumerator<T>... enumerators) {
+            return new InterleavedEnumerators<T>(enumerators);
+        }
         public static <T> Enumerator<T> of(T... args) {
             return new IterableEnumerator(Arrays.asList(args));
         }
@@ -173,41 +180,6 @@ public class Iteratees {
             return pushEnum;
         }
     }   
-    
-    private static class DecoratedEnumerator<I> extends Enumerator<I> {
-        private final Enumerator<?> fromEnumerator;
-        private final Enumeratee<?, I> throughEnumeratee;
-        private Iteratee<I, ?> toIteratee;
-        DecoratedEnumerator(Enumerator<?> fromEnumerator, 
-                Enumeratee<?, I> throughEnumeratee) {
-            this.fromEnumerator = fromEnumerator;
-            this.throughEnumeratee = throughEnumeratee;
-        }
-        @Override
-        public <O> Promise<O> applyOn(Iteratee<I, O> it) {
-            toIteratee = it;
-            Promise<O> res = it.getAsyncResult();
-            context = Actors.newContext();
-            iteratee = context.create(toIteratee, UUID.randomUUID().toString());
-            Actor enumeratee = context.create(throughEnumeratee, UUID.randomUUID().toString());
-            enumerator = context.create(fromEnumerator, UUID.randomUUID().toString());
-            throughEnumeratee.setFromEnumerator(enumerator);
-            throughEnumeratee.setToIteratee(iteratee);
-            enumerator.tell(Run.INSTANCE, enumeratee);
-            return res;
-        }
-
-        @Override
-        public boolean hasNext() {
-            throw new UnsupportedOperationException("Not supported yet.");
-        }
-
-        @Override
-        public Option<I> next() {
-            throw new UnsupportedOperationException("Not supported yet.");
-        }
-    }
-    
     public static abstract class Enumeratee<I, O> implements Behavior {
         private Actor fromEnumerator;
         private Actor toIteratee;
@@ -252,6 +224,37 @@ public class Iteratees {
         }
         public static <I,O> Enumeratee<I,O> map(Function<I,O> transform) {
             return new MapEnumeratee<I, O>(transform);
+        }
+    }
+    private static class DecoratedEnumerator<I> extends Enumerator<I> {
+        private final Enumerator<?> fromEnumerator;
+        private final Enumeratee<?, I> throughEnumeratee;
+        private Iteratee<I, ?> toIteratee;
+        DecoratedEnumerator(Enumerator<?> fromEnumerator, 
+                Enumeratee<?, I> throughEnumeratee) {
+            this.fromEnumerator = fromEnumerator;
+            this.throughEnumeratee = throughEnumeratee;
+        }
+        @Override
+        public <O> Promise<O> applyOn(Iteratee<I, O> it) {
+            toIteratee = it;
+            Promise<O> res = it.getAsyncResult();
+            context = Actors.newContext();
+            iteratee = context.create(toIteratee, UUID.randomUUID().toString());
+            Actor enumeratee = context.create(throughEnumeratee, UUID.randomUUID().toString());
+            enumerator = context.create(fromEnumerator, UUID.randomUUID().toString());
+            throughEnumeratee.setFromEnumerator(enumerator);
+            throughEnumeratee.setToIteratee(iteratee);
+            enumerator.tell(Run.INSTANCE, enumeratee);
+            return res;
+        }
+        @Override
+        public boolean hasNext() {
+            return fromEnumerator.hasNext();
+        }
+        @Override
+        public Option<I> next() {
+            throw new RuntimeException();
         }
     }
     
@@ -385,7 +388,7 @@ public class Iteratees {
             return (current < Character.MAX_VALUE);
         }
     }
-    public static class FromInputStreamEnumerator extends Enumerator<Byte[]> {
+    private static class FromInputStreamEnumerator extends Enumerator<Byte[]> {
         private final InputStream is;
         private final int chunkSize;
         private boolean hasnext = true;
@@ -428,7 +431,7 @@ public class Iteratees {
             return hasnext;
         }
     }
-    public static class FromFileLinesEnumerator extends Enumerator<String> {
+    private static class FromFileLinesEnumerator extends Enumerator<String> {
         private final FileInputStream fstream;
         private final DataInputStream in;
         private final BufferedReader br;
@@ -492,7 +495,55 @@ public class Iteratees {
             enumerator.tell(Done.INSTANCE, iteratee);
         }
     } 
-    public static class ForeachIteratee<T> extends Iteratee<T, Unit> {
+    private static class InterleavedEnumerators<T> extends Enumerator<T> {
+        private final List<Enumerator<T>> enumerators;
+        private final CountDownLatch latch;
+        private final Actor globalIteratee;
+        private Actor finalIteratee;
+        private final ActorContext actCtx;
+        private final Behavior client = new Behavior() {
+            @Override
+            public Effect apply(Object msg, Context ctx) {
+                if (latch.getCount() == 0) {
+                    return Actors.DIE;
+                }
+                for (Elem e : M.caseClassOf(Elem.class, msg)) {
+                    finalIteratee.tell(e, ctx.me);
+                    ctx.from.tell(Cont.INSTANCE, ctx.from);
+                }
+                for (EOF eof : M.caseClassOf(EOF.class, msg)) {
+                    latch.countDown();
+                }
+                return Actors.CONTINUE;
+            }
+        };
+        public InterleavedEnumerators(Enumerator<T>... enumerators) {
+            this.latch = new CountDownLatch(enumerators.length);
+            actCtx = Actors.newContext();
+            globalIteratee = actCtx.create(client, UUID.randomUUID().toString());
+            this.enumerators = Arrays.asList(enumerators);
+        }
+        @Override
+        public Option<T> next() {
+            throw new RuntimeException("next should not be called");
+        }
+        @Override
+        public boolean hasNext() {
+            return latch.getCount() == 0;
+        }
+        @Override
+        public <O> Promise<O> applyOn(Iteratee<T, O> it) {
+            Promise<O> res = it.getAsyncResult();
+            finalIteratee = actCtx.create(it, UUID.randomUUID().toString());
+            for (Enumerator e : enumerators) {
+                e.iteratee = globalIteratee;
+                e.enumerator = actCtx.create(e, UUID.randomUUID().toString());
+                e.enumerator.tell(Run.INSTANCE, globalIteratee);
+            }
+            return res;
+        }
+    } 
+    private static class ForeachIteratee<T> extends Iteratee<T, Unit> {
         private final Function<T, Unit> func;
         public ForeachIteratee(Function<T, Unit> func) {
             this.func = func;
@@ -512,7 +563,7 @@ public class Iteratees {
             return Actors.CONTINUE;
         }
     }
-    public static class MapEnumeratee<I, O> extends Enumeratee<I, O> {
+    private static class MapEnumeratee<I, O> extends Enumeratee<I, O> {
         public MapEnumeratee(Function<I, O> transform) {
             super(transform);
         }
