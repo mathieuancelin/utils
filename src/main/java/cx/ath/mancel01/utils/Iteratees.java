@@ -93,9 +93,10 @@ public class Iteratees {
         public abstract Option<I> next();
         Actor enumerator;
         Actor iteratee;
+        ActorContext context;
         public <O> Promise<O> applyOn(Iteratee<I, O> it) {
             Promise<O> res = it.getAsyncResult();
-            ActorContext context = Actors.newContext();
+            context = Actors.newContext();
             iteratee = context.create(it, UUID.randomUUID().toString());
             enumerator = context.create(this, UUID.randomUUID().toString());
             enumerator.tell(Run.INSTANCE, iteratee);
@@ -122,8 +123,10 @@ public class Iteratees {
                 }
             };
         }
+        public <O> Enumerator<O> through(Enumeratee<I, O> enumeratee) {
+            return new DecoratedEnumerator<O>(this, enumeratee);
+        }
         // interleave
-        // through(enumeratee)        
         public static <T> Enumerator<T> of(T... args) {
             return new IterableEnumerator(Arrays.asList(args));
         }
@@ -170,6 +173,91 @@ public class Iteratees {
             return pushEnum;
         }
     }   
+    
+    private static class DecoratedEnumerator<I> extends Enumerator<I> {
+        private final Enumerator<?> fromEnumerator;
+        private final Enumeratee<?, I> throughEnumeratee;
+        private Iteratee<I, ?> toIteratee;
+        DecoratedEnumerator(Enumerator<?> fromEnumerator, 
+                Enumeratee<?, I> throughEnumeratee) {
+            this.fromEnumerator = fromEnumerator;
+            this.throughEnumeratee = throughEnumeratee;
+        }
+        @Override
+        public <O> Promise<O> applyOn(Iteratee<I, O> it) {
+            toIteratee = it;
+            Promise<O> res = it.getAsyncResult();
+            context = Actors.newContext();
+            iteratee = context.create(toIteratee, UUID.randomUUID().toString());
+            Actor enumeratee = context.create(throughEnumeratee, UUID.randomUUID().toString());
+            enumerator = context.create(fromEnumerator, UUID.randomUUID().toString());
+            throughEnumeratee.setFromEnumerator(enumerator);
+            throughEnumeratee.setToIteratee(iteratee);
+            enumerator.tell(Run.INSTANCE, enumeratee);
+            return res;
+        }
+
+        @Override
+        public boolean hasNext() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        public Option<I> next() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    }
+    
+    public static abstract class Enumeratee<I, O> implements Behavior {
+        private Actor fromEnumerator;
+        private Actor toIteratee;
+        private final Function<I, O> tranform;
+        public Enumeratee(Function<I, O> tranform) {
+            this.tranform = tranform;
+        }
+        public void setToIteratee(Actor toIteratee) {
+            this.toIteratee = toIteratee;
+        }
+
+        public void setFromEnumerator(Actor fromEnumerator) {
+            this.fromEnumerator = fromEnumerator;
+        }
+        @Override
+        public Effect apply(Object msg, Context ctx) {
+            for (Elem e : M.caseClassOf(Elem.class, msg)) {
+                Elem<I> el = (Elem<I>) e;
+                for (I elem : el.get()) { 
+                   toIteratee.tell(new Elem<O>(tranform.apply(elem)), ctx.me);
+                }
+            }
+            for (EOF eof : M.caseClassOf(EOF.class, msg)) {
+                toIteratee.tell(eof, ctx.me);
+            }
+            for (Empty empty : M.caseClassOf(Empty.class, msg)) {
+                toIteratee.tell(empty, ctx.me);
+            }
+            //////////////////////////////////////////////////
+            for (Cont cont : M.caseClassOf(Cont.class, msg)) {
+                fromEnumerator.tell(cont, ctx.me);
+            }
+            for (Done done : M.caseClassOf(Done.class, msg)) {
+                fromEnumerator.tell(done, ctx.me);
+                return Actors.DIE;
+            }
+            for (Error error : M.caseClassOf(Error.class, msg)) {
+                fromEnumerator.tell(error, ctx.me);
+                return Actors.DIE;
+            }
+            return Actors.CONTINUE;
+        }
+        public static <I,O> Enumeratee<I,O> map(Function<I,O> transform) {
+            return new MapEnumeratee<I, O>(transform);
+        }
+    }
+    
+    /**************************************************************************/
+    /**************************************************************************/
+    /**************************************************************************/
     
     public static class IterableEnumerator<T> extends Enumerator<T> {
         private final Iterator<T> it;
@@ -422,6 +510,11 @@ public class Iteratees {
                 return done(Unit.unit(), ctx);
             }
             return Actors.CONTINUE;
+        }
+    }
+    public static class MapEnumeratee<I, O> extends Enumeratee<I, O> {
+        public MapEnumeratee(Function<I, O> transform) {
+            super(transform);
         }
     }
 }

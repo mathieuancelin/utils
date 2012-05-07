@@ -11,6 +11,7 @@ import cx.ath.mancel01.utils.actors.Actors.Effect;
 import cx.ath.mancel01.utils.Iteratees.Cont;
 import cx.ath.mancel01.utils.Iteratees.EOF;
 import cx.ath.mancel01.utils.Iteratees.Elem;
+import cx.ath.mancel01.utils.Iteratees.Enumeratee;
 import cx.ath.mancel01.utils.Iteratees.Enumerator;
 import cx.ath.mancel01.utils.Iteratees.Iteratee;
 import cx.ath.mancel01.utils.Iteratees.LongEnumerator;
@@ -36,6 +37,30 @@ public class IterateeTest {
                 try {
                     System.out.println(t.get());
                     Assert.assertEquals(t.get(), "MathieuKevinJeremy");
+                    latch.countDown();
+                } catch (Exception ex) {}
+            }
+        });  
+        latch.await(10, TimeUnit.SECONDS);
+        Assert.assertEquals(0, latch.getCount());
+    }
+    
+    @Test
+    public void testIterateeOnListThroughEnumeratee() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        Promise<String> promise = Enumerator.of("Mathieu", "Kevin", "Jeremy")
+                    .through(Enumeratee.map(new Function<String, String>() {
+                        @Override
+                        public String apply(String t) {
+                            return t.toUpperCase();
+                        }
+                    })).applyOn(new ListIteratee());
+        promise.onRedeem(new Action<Promise<String>>() {
+            @Override
+            public void apply(Promise<String> t) {
+                try {
+                    System.out.println(t.get());
+                    Assert.assertEquals(t.get(), "MATHIEUKEVINJEREMY");
                     latch.countDown();
                 } catch (Exception ex) {}
             }
