@@ -130,7 +130,6 @@ public class Iteratees {
         public <O> Enumerator<O> through(Enumeratee<I, O> enumeratee) { // SHOULD WORK CHAINED
             return new DecoratedEnumerator<O>(this, enumeratee);
         }
-        // interleave
         public static <T> Enumerator<T> interleave(Enumerator<T>... enumerators) {
             return new InterleavedEnumerators<T>(enumerators);
         }
@@ -208,7 +207,6 @@ public class Iteratees {
             for (Empty empty : M.caseClassOf(Empty.class, msg)) {
                 toIteratee.tell(empty, ctx.me);
             }
-            //////////////////////////////////////////////////
             for (Cont cont : M.caseClassOf(Cont.class, msg)) {
                 fromEnumerator.tell(cont, ctx.me);
             }
@@ -418,7 +416,6 @@ public class Iteratees {
             return Option.some(copy);
         }
         private void close() {
-            //System.out.println("Closing IS");
             hasnext = false;
             try {
                 is.close();
@@ -525,11 +522,11 @@ public class Iteratees {
         }
         @Override
         public Option<T> next() {
-            throw new RuntimeException("next should not be called");
+            throw new RuntimeException("next should never be called");
         }
         @Override
         public boolean hasNext() {
-            return latch.getCount() == 0;
+            throw new RuntimeException("next should never be called");
         }
         @Override
         public <O> Promise<O> applyOn(Iteratee<T, O> it) {
