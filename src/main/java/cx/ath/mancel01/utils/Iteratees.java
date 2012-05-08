@@ -14,6 +14,7 @@ import cx.ath.mancel01.utils.actors.Actors.Poison;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -119,8 +120,8 @@ public class Iteratees {
                 }
             };
         }
-        public <O> Enumerator<O> through(Enumeratee<I, O> enumeratee) { // SHOULD WORK CHAINED
-            return new DecoratedEnumerator<O>(this, enumeratee);
+        public <O> Enumerator<O> through(Enumeratee<I, O>... enumeratees) {
+            return new DecoratedEnumerator<O>(this, enumeratees);
         }
         public static <T> Enumerator<T> interleave(Enumerator<T>... enumerators) {
             return new InterleavedEnumerators<T>(enumerators);
@@ -216,20 +217,37 @@ public class Iteratees {
             return new MapEnumeratee<I, O>(transform);
         }
     }
+    
+    /**************************************************************************/
+    /**************************************************************************/
+    /**************************************************************************/
+    
     private static class DecoratedEnumerator<I> extends Enumerator<I> {
         private final Enumerator<?> fromEnumerator;
-        private final Enumeratee<?, I> throughEnumeratee;
+        private final List<Function> functions = new ArrayList<Function>();
         private Iteratee<I, ?> toIteratee;
+        private final Enumeratee throughEnumeratee = Enumeratee.map(new Function<Object, Object>() {
+            @Override
+            public Object apply(Object t) {
+                return applyTransforms(t);
+            }
+        });
         DecoratedEnumerator(Enumerator<?> fromEnumerator, 
-                Enumeratee<?, I> throughEnumeratee) {
+                Enumeratee<?, I>... throughEnumeratees) {
             this.fromEnumerator = fromEnumerator;
-            this.throughEnumeratee = throughEnumeratee;
+            if (throughEnumeratees != null && throughEnumeratees.length > 0) {  
+                context = Actors.newContext();
+                for (Enumeratee enumeratee : throughEnumeratees) {
+                    functions.add(enumeratee.tranform);
+                }
+            } else {
+                throw new RuntimeException("You have to provide at least one enumeratee");
+            }
         }
         @Override
         public <O> Promise<O> applyOn(Iteratee<I, O> it) {
             toIteratee = it;
             Promise<O> res = it.getAsyncResult();
-            context = Actors.newContext();
             iteratee = context.create(toIteratee, UUID.randomUUID().toString());
             Actor enumeratee = context.create(throughEnumeratee, UUID.randomUUID().toString());
             enumerator = context.create(fromEnumerator, UUID.randomUUID().toString());
@@ -238,20 +256,26 @@ public class Iteratees {
             enumerator.tell(Run.INSTANCE, enumeratee);
             return res;
         }
+        private Object applyTransforms(Object in) {
+            Object res = in;
+            for (Function func : functions) {
+                res = func.apply(res);
+            }
+            return res;
+        }
         @Override
         public boolean hasNext() {
-            return fromEnumerator.hasNext();
+            throw new RuntimeException("Should never happen");
         }
         @Override
         public Option<I> next() {
-            throw new RuntimeException();
+            throw new RuntimeException("Should never happen");
+        }
+        @Override
+        public <O> Enumerator<O> through(Enumeratee<I, O>... enumeratees) {
+            throw new RuntimeException("Not allowed. Try to chained Enumeratee instead");
         }
     }
-    
-    /**************************************************************************/
-    /**************************************************************************/
-    /**************************************************************************/
-    
     public static class IterableEnumerator<T> extends Enumerator<T> {
         private final Iterator<T> it;
         public IterableEnumerator(Iterable<T> iterable) {
@@ -531,7 +555,7 @@ public class Iteratees {
             }
             return res;
         }
-    } 
+    }
     private static class ForeachIteratee<T> extends Iteratee<T, Unit> {
         private final Function<T, Unit> func;
         public ForeachIteratee(Function<T, Unit> func) {

@@ -17,6 +17,7 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import org.junit.Test;
 
+//@org.junit.Ignore
 public class PiActorRemoteTest {
     
     final static CountDownLatch latch = new CountDownLatch(5);
@@ -191,6 +192,7 @@ public class PiActorRemoteTest {
                 host1.stopRemoting();
                 host2.stopRemoting();
             } catch (Exception e) { e.printStackTrace(); }
+            //Thread.sleep(20000);
         }
     }
 }

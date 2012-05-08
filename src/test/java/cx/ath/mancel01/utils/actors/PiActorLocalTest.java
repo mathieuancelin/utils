@@ -138,6 +138,7 @@ public class PiActorLocalTest {
         System.out.println(String.format(
                 "\n\tPi estimate: \t\t%s\n\tCalculation time: \t%s millis",
                     Master.pi, (System.currentTimeMillis() - start)));
+        //Thread.sleep(20000);
     }
 
 }

@@ -31,6 +31,7 @@ public class PingPongLocalTest {
         Assert.assertTrue(latch.getCount() <= 0);
         ping.tell(Poison.PILL);
         pong.tell(Poison.PILL);
+        //Thread.sleep(20000);
     }
     
     public static final Behavior PING = new Behavior() {

@@ -53,19 +53,42 @@ public class IterateeTest {
                 public String apply(String t) {
                     return t.toUpperCase();
                 }
-            }))./**through(Enumeratee.map(new Function<String, String>() {
-                @Override
-                public String apply(String t) {
-                    return t + " ===>> ";
-                }
-            })).**/applyOn(new ListIteratee());
+            })).applyOn(new ListIteratee());
         promise.onRedeem(new Action<Promise<String>>() {
             @Override
             public void apply(Promise<String> t) {
                 try {
                     System.out.println(t.get());
                     Assert.assertEquals(t.get(), "MATHIEUKEVINJEREMY");
-                    //Assert.assertEquals(t.get(), "MATHIEU ===>> KEVIN ===>> JEREMY ===>> ");
+                    latch.countDown();
+                } catch (Exception ex) {}
+            }
+        });  
+        latch.await(10, TimeUnit.SECONDS);
+        Assert.assertEquals(0, latch.getCount());
+    }
+    
+    @Test
+    public void testIterateeOnListThroughEnumeratees() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        Promise<String> promise = Enumerator.of("Mathieu", "Kevin", "Jeremy")
+            .through(Enumeratee.map(new Function<String, String>() {
+                @Override
+                public String apply(String t) {
+                    return t.toUpperCase();
+                }
+            }), Enumeratee.map(new Function<String, String>() {
+                @Override
+                public String apply(String t) {
+                    return t + " ===>> ";
+                }
+            })).applyOn(new ListIteratee());
+        promise.onRedeem(new Action<Promise<String>>() {
+            @Override
+            public void apply(Promise<String> t) {
+                try {
+                    System.out.println(t.get());
+                    Assert.assertEquals(t.get(), "MATHIEU ===>> KEVIN ===>> JEREMY ===>> ");
                     latch.countDown();
                 } catch (Exception ex) {}
             }

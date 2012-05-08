@@ -47,6 +47,7 @@ public class PingPongRemoteTest {
                 host1.stopRemoting();
                 host2.stopRemoting();
             } catch (Exception e) { e.printStackTrace(); }
+            //Thread.sleep(20000);
         }
     }
     
