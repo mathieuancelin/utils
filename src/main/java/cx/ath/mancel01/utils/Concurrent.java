@@ -17,6 +17,7 @@
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.ExceptionWrapper;
+import cx.ath.mancel01.utils.F.Function;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,6 +27,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Concurrent {
 
@@ -98,7 +101,35 @@ public class Concurrent {
                 callback.apply(this);
             }
         }
-
+        
+        public <B> Promise<B> map(final Function<V, B> map) {
+            final Promise<B> promise = new Promise<B>();
+            this.onRedeem(new F.Action<Promise<V>>() {
+                @Override
+                public void apply(Promise<V> t) {
+                    try {
+                        promise.apply(map.apply(t.get()));
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            return promise;
+        }
+        public <B> Promise<B> flatmap(final Function<V, Promise<B>> map) {
+            final Promise<B> promise = new Promise<B>();
+            this.onRedeem(new F.Action<Promise<V>>() {
+                @Override
+                public void apply(Promise<V> t) {
+                    try {
+                        promise.apply(map.apply(t.get()).get());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            return promise;
+        }
         public static <T> Promise<List<T>> waitAll(final Promise<T>... promises) {
             return waitAll(Arrays.asList(promises));
         }
