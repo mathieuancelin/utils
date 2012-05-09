@@ -217,12 +217,36 @@ public class Concurrent {
             return result;
         }
         
+        public static <T> Promise<T> pure(T t) {
+            Promise<T> promise = new Promise<T>();
+            promise.apply(t);
+            return promise;
+        }
+        
+        public static void now(ExecutorService service, final Runnable callable) {
+            service.execute(callable);
+        }
+        
+        public static void now(ActorContext context, final Runnable callable) {
+            context.now(callable);
+        }
+        
+        public static void now(final Runnable callable) {
+            final ActorContext context = Actors.newContext();
+            context.now(callable);
+        }
+        
+        public static void scheduleOnce(long in, TimeUnit unit, Runnable callable) {
+            final ActorContext context = Actors.newContext();
+            context.scheduleOnce(in, unit, callable);
+        }
+        
         public static <T> Promise<T> future(final F.Callable<T> callable) {
             final ActorContext context = Actors.newContext();
             return context.now(callable);
         }
         
-        public static <T> Promise<T> future(long in, TimeUnit unit, F.Callable<T> callable) {
+        public static <T> Promise<T> futureOnce(long in, TimeUnit unit, F.Callable<T> callable) {
             final ActorContext context = Actors.newContext();
             return context.scheduleOnce(in, unit, callable);
         }
@@ -231,7 +255,7 @@ public class Concurrent {
             return context.now(callable);
         }
         
-        public static <T> Promise<T> future(ActorContext context, long in, TimeUnit unit, F.Callable<T> callable) {
+        public static <T> Promise<T> futureOnce(ActorContext context, long in, TimeUnit unit, F.Callable<T> callable) {
             return context.scheduleOnce(in, unit, callable);
         }
     }
