@@ -1,19 +1,38 @@
+/*
+ *  Copyright 2011-2012 Mathieu ANCELIN
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *  under the License.
+ */
+
 package cx.ath.mancel01.utils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import org.junit.Assert;
-import org.junit.Test;
-
-import static cx.ath.mancel01.utils.F.*;
-import static cx.ath.mancel01.utils.F.Unit.*;
-import static cx.ath.mancel01.utils.F.Either.*;
 import static cx.ath.mancel01.utils.C.*;
+import cx.ath.mancel01.utils.F.Action;
+import cx.ath.mancel01.utils.F.CheckedAction;
+import cx.ath.mancel01.utils.F.Either;
+import static cx.ath.mancel01.utils.F.Either.eitherLeft;
+import static cx.ath.mancel01.utils.F.Either.eitherRight;
+import cx.ath.mancel01.utils.F.F2;
+import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.F.Option;
+import cx.ath.mancel01.utils.F.Unit;
+import static cx.ath.mancel01.utils.F.Unit.unit;
 import static cx.ath.mancel01.utils.M.*;
 import static cx.ath.mancel01.utils.Y.*;
+import java.util.*;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class UtilsTest implements Utils {
 

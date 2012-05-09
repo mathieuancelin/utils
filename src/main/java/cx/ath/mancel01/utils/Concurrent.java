@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Mathieu ANCELIN
+ *  Copyright 2011-2012 Mathieu ANCELIN
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  *  limitations under the License.
  *  under the License.
  */
+
+
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.ExceptionWrapper;

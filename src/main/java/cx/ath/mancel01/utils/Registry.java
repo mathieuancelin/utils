@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Mathieu ANCELIN
+ *  Copyright 2011-2012 Mathieu ANCELIN
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -14,20 +14,18 @@
  *  limitations under the License.
  *  under the License.
  */
+
+
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.C.EnhancedList;
 import cx.ath.mancel01.utils.F.Option;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Service registry for very basic dynamic dependency injection.
+ * Service registry for very basic dynamic manua ldependency injection using
+ * the service locator pattern.
  * 
  * @author Mathieu ANCELIN
  */

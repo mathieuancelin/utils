@@ -1,5 +1,5 @@
 /*
- *  Copyright 2011 Mathieu ANCELIN
+ *  Copyright 2011-2012 Mathieu ANCELIN
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -14,19 +14,17 @@
  *  limitations under the License.
  *  under the License.
  */
+
+
 package cx.ath.mancel01.utils;
 
-import static cx.ath.mancel01.utils.F.*;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import cx.ath.mancel01.utils.F.Action;
+import cx.ath.mancel01.utils.F.F2;
+import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.F.Option;
+import cx.ath.mancel01.utils.F.Tuple;
+import cx.ath.mancel01.utils.F.Unit;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -57,9 +55,7 @@ public final class C {
     
     public static <T> EnhancedList<T> eList(T... firstItem) {
         List<T> list = new ArrayList<T>();
-        for (T t : firstItem) {
-            list.add(t);
-        }
+        list.addAll(Arrays.asList(firstItem));
         return new EnhancedListImpl<T>(list);
     }
     
