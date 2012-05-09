@@ -18,17 +18,13 @@ package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.ExceptionWrapper;
 import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.actors.Actors;
+import cx.ath.mancel01.utils.actors.Actors.ActorContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.concurrent.*;
 
 public class Concurrent {
 
@@ -217,6 +213,24 @@ public class Concurrent {
                 f.onRedeem(action);
             }
             return result;
+        }
+        
+        public static <T> Promise<T> future(final F.Callable<T> callable) {
+            final ActorContext context = Actors.newContext();
+            return context.now(callable);
+        }
+        
+        public static <T> Promise<T> future(long in, TimeUnit unit, F.Callable<T> callable) {
+            final ActorContext context = Actors.newContext();
+            return context.scheduleOnce(in, unit, callable);
+        }
+        
+        public static <T> Promise<T> future(ActorContext context, final F.Callable<T> callable) {
+            return context.now(callable);
+        }
+        
+        public static <T> Promise<T> future(ActorContext context, long in, TimeUnit unit, F.Callable<T> callable) {
+            return context.scheduleOnce(in, unit, callable);
         }
     }
 }

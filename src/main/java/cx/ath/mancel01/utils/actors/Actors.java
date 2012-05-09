@@ -1,5 +1,7 @@
 package cx.ath.mancel01.utils.actors;
 
+import cx.ath.mancel01.utils.Concurrent.Promise;
+import cx.ath.mancel01.utils.F;
 import cx.ath.mancel01.utils.F.F2;
 import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.SimpleLogger;
@@ -306,12 +308,18 @@ public class Actors {
         public Actor create(final Behavior initial, final String name, final Executor e);
 
         public void clear();
+        
+        void now(Runnable runnable);
+        
+        <T> Promise<T> now(F.Callable<T> callable);
 
         void schedule(long every, TimeUnit unit, Runnable runnable);
 
         void schedule(long every, TimeUnit unit, final Actor actor, final Object message);
 
         void scheduleOnce(long in, TimeUnit unit, Runnable runnable);
+        
+        <T> Promise<T>  scheduleOnce(long in, TimeUnit unit, F.Callable<T> callable);
 
         void scheduleOnce(long in, TimeUnit unit, final Actor actor, final Object message);
     }
@@ -416,6 +424,35 @@ public class Actors {
         @Override
         public void schedule(long every, TimeUnit unit, Runnable runnable) {
             scheduler.scheduleWithFixedDelay(runnable, 0L, every, unit);
+        }
+
+        @Override
+        public void now(Runnable runnable) {
+            scheduleOnce(0, TimeUnit.MILLISECONDS, runnable);
+        }
+
+        @Override
+        public <T> Promise<T> now(final F.Callable<T> callable) {
+            final Promise<T> promise = new Promise<T>();
+            now(new Runnable() {
+                @Override
+                public void run() {                    
+                    promise.apply(callable.apply());
+                }
+            });
+            return promise;
+        }
+
+        @Override
+        public <T> Promise<T> scheduleOnce(long in, TimeUnit unit, final F.Callable<T> callable) {
+            final Promise<T> promise = new Promise<T>();
+            scheduleOnce(in, unit, new Runnable() {
+                @Override
+                public void run() {
+                    promise.apply(callable.apply());
+                }
+            });
+            return promise;
         }
     }
     
