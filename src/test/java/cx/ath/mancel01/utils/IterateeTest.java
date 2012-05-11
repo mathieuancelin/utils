@@ -28,6 +28,7 @@ import cx.ath.mancel01.utils.Iteratees.EOF;
 import cx.ath.mancel01.utils.Iteratees.Elem;
 import cx.ath.mancel01.utils.Iteratees.Enumeratee;
 import cx.ath.mancel01.utils.Iteratees.Enumerator;
+import cx.ath.mancel01.utils.Iteratees.HubEnumerator;
 import cx.ath.mancel01.utils.Iteratees.Iteratee;
 import cx.ath.mancel01.utils.Iteratees.PushEnumerator;
 import cx.ath.mancel01.utils.actors.Actors;
@@ -169,7 +170,7 @@ public class IterateeTest {
     @Test
     public void testPushEnumerator() throws Exception {
         final CountDownLatch latch = new CountDownLatch(5);
-        PushEnumerator<String> pushEnum = Enumerator.push(String.class);
+        PushEnumerator<String> pushEnum = Enumerator.imperative(String.class);
         pushEnum.applyOn(Iteratee.foreach(new Function<String, Unit>() {
             @Override
             public Unit apply(String t) {
@@ -195,9 +196,9 @@ public class IterateeTest {
     @Test
     public void testInterleave() throws Exception {
         final CountDownLatch latch = new CountDownLatch(5);
-        PushEnumerator<String> pushEnum1 = Enumerator.push(String.class);
-        PushEnumerator<String> pushEnum2 = Enumerator.push(String.class);
-        PushEnumerator<String> pushEnum3 = Enumerator.push(String.class);
+        PushEnumerator<String> pushEnum1 = Enumerator.imperative(String.class);
+        PushEnumerator<String> pushEnum2 = Enumerator.imperative(String.class);
+        PushEnumerator<String> pushEnum3 = Enumerator.imperative(String.class);
         Enumerator<String> global = Enumerator.interleave(pushEnum1, pushEnum2, pushEnum3);
         global.applyOn(Iteratee.foreach(new Function<String, Unit>() {
             @Override
@@ -268,6 +269,40 @@ public class IterateeTest {
         }));
         latch.await(10, TimeUnit.SECONDS);
         pushEnum.stop();
+        Assert.assertEquals(0, latch.getCount());
+    }
+    
+    @Test
+    public void testHubEnumerator() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(6);
+        Enumerator<String> enumerator = Enumerator.of("Hello", "World");
+        HubEnumerator<String> hub = Enumerator.hub(enumerator);
+        Iteratee<String, Unit> it1 = Iteratee.foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                latch.countDown();
+                System.out.println("Received from Iteratee 1 : " + t);
+                return Unit.unit();
+            }
+        });
+        Iteratee<String, Unit> it2 = Iteratee.foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                latch.countDown();
+                System.out.println("Received from Iteratee 2 : " + t);
+                return Unit.unit();
+            }
+        });
+        Iteratee<String, Unit> it3 = Iteratee.foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                latch.countDown();
+                System.out.println("Received from Iteratee 3 : " + t);
+                return Unit.unit();
+            }
+        });
+        hub.add(it1).add(it2).add(it3).broadcast();
+        latch.await();
         Assert.assertEquals(0, latch.getCount());
     }
 

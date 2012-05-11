@@ -159,7 +159,7 @@ public class Iteratees {
         public static <T> Enumerator<String> fromFileLines(File f) {
             return new FromFileLinesEnumerator(f);
         }
-        public static <T> PushEnumerator<T> push(Class<T> clazz) {
+        public static <T> PushEnumerator<T> imperative(Class<T> clazz) {
             return new PushEnumerator<T>();
         }
         public static <T> PushEnumerator<T> fromCallback(long every, TimeUnit unit, final Function<Unit, Option<T>> callback) {
@@ -183,6 +183,9 @@ public class Iteratees {
                 }
             });
             return pushEnum;
+        }
+        public static <T> HubEnumerator<T> hub(Enumerator<T> enumerator) {
+            return new HubEnumerator(enumerator);
         }
     }   
     public static abstract class Enumeratee<I, O> implements Behavior {
@@ -592,6 +595,69 @@ public class Iteratees {
     private static class MapEnumeratee<I, O> extends Enumeratee<I, O> {
         public MapEnumeratee(Function<I, O> transform) {
             super(transform);
+        }
+    }
+    public static class HubEnumerator<T> {
+        private final List<Actor> iteratees = new ArrayList<Actor>();
+        private final Enumerator<T> fromEnumerator;
+        private Actor enumerator;
+        private final Actor internalIteratee;
+        private final ActorContext context = Actors.newContext();
+        public HubEnumerator(Enumerator<T> fromEnumerator) {
+            this.fromEnumerator = fromEnumerator;
+            internalIteratee = context.create(new Behavior() {
+                @Override
+                public Effect apply(Object msg, Context ctx) {
+                    for (Cont cont : M.caseClassOf(Cont.class, msg)) {
+                        enumerator.tell(cont, ctx.me);
+                    }
+                    for (Done done : M.caseClassOf(Done.class, msg)) {
+                        if (!iteratees.isEmpty()) {
+                            iteratees.remove(ctx.from);
+                        } else {
+                            enumerator.tell(done, ctx.me);
+                        }
+                    }
+                    for (Error error : M.caseClassOf(Error.class, msg)) {
+                        if (!iteratees.isEmpty()) {
+                            iteratees.remove(ctx.from);
+                        } else {
+                            enumerator.tell(error, ctx.me);
+                        }
+                    }
+                    for (Elem e : M.caseClassOf(Elem.class, msg)) {
+                        for (Actor actor : iteratees) {
+                            actor.tell(e, ctx.me);
+                        }
+                    }
+                    for (EOF eof : M.caseClassOf(EOF.class, msg)) {
+                        for (Actor actor : iteratees) {
+                            actor.tell(eof, ctx.me);
+                        }
+                    }
+                    for (Empty empty : M.caseClassOf(Empty.class, msg)) {
+                        for (Actor actor : iteratees) {
+                            actor.tell(empty, ctx.me);
+                        }
+                    }
+                    return Actors.CONTINUE;
+                }
+            }, UUID.randomUUID().toString());
+        }
+        public HubEnumerator<T> add(Iteratee<T, ?> iteratee) {
+            iteratees.add(context.create(iteratee, UUID.randomUUID().toString()));
+            return this;
+        }
+        public void broadcast() {
+            enumerator = context.create(fromEnumerator, UUID.randomUUID().toString());
+            enumerator.tell(Run.INSTANCE, internalIteratee);
+        }
+        public void stop() {
+            for (Actor actor : iteratees) {
+                actor.tell(Poison.PILL);
+            }
+            enumerator.tell(Poison.PILL);
+            internalIteratee.tell(Poison.PILL);
         }
     }
 }
