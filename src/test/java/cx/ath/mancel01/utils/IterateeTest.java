@@ -303,6 +303,7 @@ public class IterateeTest {
         });
         hub.add(it1).add(it2).add(it3).broadcast();
         latch.await();
+        hub.stop();
         Assert.assertEquals(0, latch.getCount());
     }
 
