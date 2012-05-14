@@ -519,6 +519,10 @@ public class Iteratees {
         @Override
         public <O> Promise<O> applyOn(Iteratee<T, O> it) {
             Promise<O> promise = super.applyOn(it);
+            schedule();
+            return promise;
+        }
+        private void schedule() {
             context.schedule(every, unit, new Runnable() {
                 @Override
                 public void run() {
@@ -528,7 +532,6 @@ public class Iteratees {
                     }
                 }
             });
-            return promise;
         }
     }
     private static class InterleavedEnumerators<T> extends Enumerator<T> {
@@ -663,15 +666,7 @@ public class Iteratees {
             enumerator.tell(Run.INSTANCE, internalIteratee);
             if (fromEnumerator instanceof CallbackPushEnumerator) {
                 final CallbackPushEnumerator<T> p = (CallbackPushEnumerator<T>) fromEnumerator;
-                context.schedule(p.every, p.unit, new Runnable() {
-                    @Override
-                    public void run() {
-                        Option<T> opt = p.callback.apply(Unit.unit());
-                        for (T elem : opt) {
-                            p.push(elem);
-                        }
-                    }
-                });
+                p.schedule();
             }
         }
         public void stop() {
