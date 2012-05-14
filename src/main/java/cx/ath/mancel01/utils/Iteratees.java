@@ -163,26 +163,7 @@ public class Iteratees {
             return new PushEnumerator<T>();
         }
         public static <T> PushEnumerator<T> fromCallback(long every, TimeUnit unit, final Function<Unit, Option<T>> callback) {
-            final PushEnumerator<T> pushEnum = new PushEnumerator<T>();
-            final ActorContext ctx = Actors.newContext();
-            final ExecutorService exec = Executors.newCachedThreadPool();
-            ctx.schedule(every, unit, new Runnable() {
-                @Override
-                public void run() {
-                    Option<T> opt = callback.apply(Unit.unit());
-                    for (T elem : opt) {
-                        final T el = elem;
-                        Runnable r = new Runnable() {
-                            @Override
-                            public void run() {
-                                pushEnum.push(el);
-                            }
-                        };
-                        exec.execute(r);
-                    }
-                }
-            });
-            return pushEnum;
+            return new CallbackPushEnumerator<T>(every, unit, callback);
         }
         public static <T> HubEnumerator<T> hub(Enumerator<T> enumerator) {
             return new HubEnumerator(enumerator);
@@ -515,6 +496,8 @@ public class Iteratees {
             try {
                 if (enumerator != null) {
                     enumerator.tell(Cont.INSTANCE, iteratee);
+                } else {
+                    System.err.println("Push of '" + elem.toString() + "' failed because enumerator == " + enumerator);
                 }
             } catch (Exception e) { e.printStackTrace(); }
         }
@@ -524,6 +507,30 @@ public class Iteratees {
             enumerator.tell(Done.INSTANCE, iteratee);
         }
     } 
+    private static class CallbackPushEnumerator<T> extends PushEnumerator<T> {
+        private final long every;
+        private final TimeUnit unit;
+        private final Function<Unit, Option<T>> callback;
+        public CallbackPushEnumerator(long every, TimeUnit unit, Function<Unit, Option<T>> callback) {
+            this.every = every;
+            this.unit = unit;
+            this.callback = callback;
+        }
+        @Override
+        public <O> Promise<O> applyOn(Iteratee<T, O> it) {
+            Promise<O> promise = super.applyOn(it);
+            context.schedule(every, unit, new Runnable() {
+                @Override
+                public void run() {
+                    Option<T> opt = callback.apply(Unit.unit());
+                    for (T elem : opt) {
+                        push(elem);
+                    }
+                }
+            });
+            return promise;
+        }
+    }
     private static class InterleavedEnumerators<T> extends Enumerator<T> {
         private final List<Enumerator<T>> enumerators;
         private final CountDownLatch latch;
@@ -650,7 +657,22 @@ public class Iteratees {
         }
         public void broadcast() {
             enumerator = context.create(fromEnumerator, UUID.randomUUID().toString());
+            fromEnumerator.context = context;
+            fromEnumerator.enumerator = enumerator;
+            fromEnumerator.iteratee = internalIteratee;
             enumerator.tell(Run.INSTANCE, internalIteratee);
+            if (fromEnumerator instanceof CallbackPushEnumerator) {
+                final CallbackPushEnumerator<T> p = (CallbackPushEnumerator<T>) fromEnumerator;
+                context.schedule(p.every, p.unit, new Runnable() {
+                    @Override
+                    public void run() {
+                        Option<T> opt = p.callback.apply(Unit.unit());
+                        for (T elem : opt) {
+                            p.push(elem);
+                        }
+                    }
+                });
+            }
         }
         public void stop() {
             for (Actor actor : iteratees) {

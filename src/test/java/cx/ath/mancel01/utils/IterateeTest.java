@@ -306,6 +306,47 @@ public class IterateeTest {
         hub.stop();
         Assert.assertEquals(0, latch.getCount());
     }
+    
+    @Test
+    public void testHubEnumerator2() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(60);
+        Enumerator<String> enumerator = Enumerator.fromCallback(10, TimeUnit.MILLISECONDS, new Function<Unit, Option<String>>() {
+            @Override
+            public Option<String> apply(Unit t) {
+                String date = System.currentTimeMillis() + "";
+                return Option.apply(date);
+            }
+        });
+        HubEnumerator<String> hub = Enumerator.hub(enumerator);
+        Iteratee<String, Unit> it1 = Iteratee.foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                latch.countDown();
+                System.out.println("Received from Iteratee 1 : " + t);
+                return Unit.unit();
+            }
+        });
+        Iteratee<String, Unit> it2 = Iteratee.foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                latch.countDown();
+                System.out.println("Received from Iteratee 2 : " + t);
+                return Unit.unit();
+            }
+        });
+        Iteratee<String, Unit> it3 = Iteratee.foreach(new Function<String, Unit>() {
+            @Override
+            public Unit apply(String t) {
+                latch.countDown();
+                System.out.println("Received from Iteratee 3 : " + t);
+                return Unit.unit();
+            }
+        });
+        hub.add(it1).add(it2).add(it3).broadcast();
+        latch.await(10, TimeUnit.SECONDS);
+        hub.stop();
+        Assert.assertEquals(0, latch.getCount());
+    }
 
     public static class ListIteratee extends Iteratee<String, String> {
         
