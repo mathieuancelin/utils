@@ -497,7 +497,7 @@ public class Iteratees {
                 if (enumerator != null) {
                     enumerator.tell(Cont.INSTANCE, iteratee);
                 } else {
-                    System.err.println("Push of '" + elem.toString() + "' failed because enumerator == " + enumerator);
+                    throw new RuntimeException("Enumerator should not be null");
                 }
             } catch (Exception e) { e.printStackTrace(); }
         }
