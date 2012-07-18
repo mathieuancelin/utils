@@ -17,24 +17,38 @@
 
 package cx.ath.mancel01.utils;
 
-import cx.ath.mancel01.utils.F.Action;
-import cx.ath.mancel01.utils.F.Tuple;
-import cx.ath.mancel01.utils.Http.Request;
-import cx.ath.mancel01.utils.Http.Response;
+import cx.ath.mancel01.utils.F.Function;
 
 public class HttpRunner {
         
-    public static void main(String... args) throws Exception {
-        Http server = Http.createServer(new Action<Tuple<Request, Response>>() {
-            @Override
-            public void apply(Tuple<Request, Response> reqResp) {
-                reqResp._2.write("<html><body><h1>Hello World! " 
-                    + System.currentTimeMillis() 
-                    + "</h1></body></html>", "UTF-8").end();
-            }
-        }).listen(8080);
-        SimpleLogger.info("Hit enter to stop the server ...");
-        System.in.read();
-        server.stop();
-    }
+//    public static void main(String... args) throws Exception {
+//        Http server = Http.createServer(new Action<Tuple<Request, Response>>() {
+//            @Override
+//            public void apply(Tuple<Request, Response> reqResp) {
+//                reqResp._2.write("<html><body><h1>Hello World! " 
+//                    + System.currentTimeMillis() 
+//                    + "</h1></body></html>", "UTF-8").end();
+//            }
+//        }).listen(8080);
+//        SimpleLogger.info("Hit enter to stop the server ...");
+//        System.in.read();
+//        server.stop();
+//    }
+    
+//    public static void main(String... args) throws Exception {
+//        Router router = new Router();
+//        router.
+//            get("/").perform(new Function<ActionContext, Result>() {
+//                @Override
+//                public Result apply(ActionContext ctx) {
+//
+//                    return new Result();
+//                }
+//            }).
+//            post("/").perform(null);
+//        Http server = Http.createServer(router).listen(9000);
+//        SimpleLogger.info("Hit enter to stop the server ...");
+//        System.in.read();
+//        server.stop();
+//    }
 }

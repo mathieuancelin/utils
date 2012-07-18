@@ -114,7 +114,42 @@ public class Concurrent {
             });
             return promise;
         }
-        public <B> Promise<B> flatmap(final Function<V, Promise<B>> map) {
+        
+        public Promise<V> filter(final Function<V, Boolean> predicate) {
+            final Promise<V> promise = new Promise<V>();
+            this.onRedeem(new F.Action<Promise<V>>() {
+                @Override
+                public void apply(Promise<V> t) {
+                    try {
+                        if (predicate.apply(t.get())) {
+                            promise.apply(t.get());
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            return promise;
+        }
+        
+        public Promise<V> filterNot(final Function<V, Boolean> predicate) {
+            final Promise<V> promise = new Promise<V>();
+            this.onRedeem(new F.Action<Promise<V>>() {
+                @Override
+                public void apply(Promise<V> t) {
+                    try {
+                        if (!predicate.apply(t.get())) {
+                            promise.apply(t.get());
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            return promise;
+        }
+        
+        public <B> Promise<B> flatMap(final Function<V, Promise<B>> map) {
             final Promise<B> promise = new Promise<B>();
             this.onRedeem(new F.Action<Promise<V>>() {
                 @Override

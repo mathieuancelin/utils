@@ -18,11 +18,13 @@
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.Action;
+import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Tuple;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -421,4 +423,209 @@ public class Http {
             return buffer;
         }
     }
+    
+//    public static class Router implements Action<Tuple<Request, Response>> {
+//        
+//        public static enum Method {
+//            ALL, GET, PUT, POST, DELETE, HEAD
+//        }
+//        
+//        public static class Result {
+//            public final String entity;
+//            public final int status;
+//            public final String contentType;
+//
+//            public Result(String entity, int status, String contentType) {
+//                this.entity = entity;
+//                this.status = status;
+//                this.contentType = contentType;
+//            }
+//        }
+        
+//        public static class Route {
+//            
+//            private final String routePattern;
+//            
+//            private final Method method;
+//            
+//            private final Router router;
+//            
+//            public Route(Method method, String routePattern, Router router) {
+//                this.routePattern = routePattern;
+//                this.method = method;
+//                this.router = router;
+//            }
+//            
+//            public Router perform(Function<ActionContext, Result> context) {
+//                return router;
+//            }
+//            
+//            boolean pathMatches(String p) {
+//                return true;
+//            }
+//        }
+        
+//        public static class Render {
+//            public static Result redirect(String url) {
+//                ResponseBuilder builder;
+//                try {
+//                    builder = Response.seeOther(new URI(url));
+//                } catch (URISyntaxException ex) {
+//                    throw new RuntimeException(ex);
+//                }
+//                return builder.build();
+//            }
+//
+//            public static Result text(final String text) {
+//                return Response.ok(text, MediaType.TEXT_PLAIN).build();
+//            }
+//
+//            public static Result binary(String file) {
+//                return binary(file, MediaType.APPLICATION_OCTET_STREAM);
+//            }
+//
+//            public static Result binary(File file) {
+//                return binary(file, MediaType.APPLICATION_OCTET_STREAM);
+//            }
+//
+//            public static Result binary(String file, String type) {
+//                return Response.ok(new File(file), type).build();
+//            }
+//
+//            public static Result binary(File file, String type) {
+//                return Response.ok(file, type).build();
+//            }
+//
+//            public static Result json(Object json) {
+//                return Response.ok(json, MediaType.APPLICATION_JSON).build();
+//            }
+//
+//            public static Result xml(Object xml) {
+//                return Response.ok(xml, MediaType.APPLICATION_XML).build();
+//            }
+//
+//            public static Result notFound() {
+//                return new Result(new PageDuo("Page not found").toString(), 404, "text/html");
+//            }
+//
+//            public static Result badRequest() {
+//                return Response.status(Response.Status.BAD_REQUEST)
+//                    .type(MediaType.TEXT_HTML)
+//                    .entity(new PageDuo("Bad request").toString()).build();
+//            }
+//
+//            public static Result ok() {
+//                return Response.ok().build();
+//            }
+//
+//            public static Result error() {
+//                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+//                    .type(MediaType.TEXT_HTML)
+//                    .entity(new PageDuo("Error").toString()).build();
+//            }
+//
+//            public static Result unavailable() {
+//                return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+//                    .type(MediaType.TEXT_HTML)
+//                    .entity(new Page("Error", "<h1>Service unavailable</h1>").toString()).build();
+//            }
+//
+//            public static Result accesDenied() {
+//                return Response.status(Response.Status.FORBIDDEN)
+//                    .type(MediaType.TEXT_HTML)
+//                    .entity(new PageDuo("Acces denied").toString()).build();
+//            }
+//
+//            public static Result todo() {
+//                return Response.status(501)
+//                    .type(MediaType.TEXT_HTML)
+//                    .entity(new Page("TODO", "<h1>Page not yet implemented</h1>").toString()).build();
+//            }
+
+//            static class PageDuo extends Page {
+//
+//                public PageDuo(String title) {
+//                    super(title, "<h1>" + title + "</h1>");
+//                }
+//            }
+//
+//            static class Page {
+//                private final String title;
+//                private final String boody;
+//
+//                public Page(String title, String boody) {
+//                    this.title = title;
+//                    this.boody = boody;
+//                }
+//
+//                @Override
+//                public String toString() {
+//                    return "<html>"
+//                            + "<head>"
+//                                + "<title>" + title + "</title>"
+//                            + "</head>"
+//                            + "<body>"
+//                                + boody
+//                            + "</body>"
+//                        + "</html>";
+//                }
+//            }
+//        }
+        
+//        public static class ActionContext {
+//            public String uri;
+//            public String path;
+//            public Method method;
+//            
+//            public String getParam(String param) {
+//                return null;
+//            }
+//        }
+//        
+//        private final List<Route> routes = new ArrayList<Route>();
+//
+//        @Override
+//        public void apply(Tuple<Request, Response> reqResp) {
+//            String path = reqResp._1.uri;
+//            if (path.contains("?")) {
+//                path = path.split("\\?")[0];
+//            }
+//            Result r = null;
+//            for (Route route : routes) {
+//                if (route.method.equals(Method.ALL) || reqResp._1.method.equals(route.method.name())) {
+//                    if (route.pathMatches(path)) {
+//                        
+//                    }
+//                }
+//            }
+//            if (r == null) {
+//                reqResp._2.statusCode = 404;
+//                reqResp._2.write("\n" + reqResp._1.method + " " + path + "\n", "UTF-8").end();
+//            }
+//        }
+//        
+//        public Route get(String pattern) {
+//            return new Route(Method.GET, pattern, this);
+//        }
+//        
+//        public Route head(String pattern) {
+//            return new Route(Method.HEAD, pattern, this);
+//        }
+//        
+//        public Route post(String pattern) {
+//            return new Route(Method.POST, pattern, this);
+//        }
+//        
+//        public Route put(String pattern) {
+//            return new Route(Method.PUT, pattern, this);
+//        }
+//        
+//        public Route delete(String pattern) {
+//            return new Route(Method.DELETE, pattern, this);
+//        }
+//        
+//        public Route all(String pattern) {
+//            return new Route(Method.ALL, pattern, this);
+//        }
+//    }
 }
