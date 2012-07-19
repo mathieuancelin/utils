@@ -655,54 +655,6 @@ public final class F {
             }
         }
     } 
-    
-    public static class Lens<A, B> implements Function<A, B> {
-        
-        private final Function<A, B> get;
-        
-        private final Function<Tuple<A, B>, A> set;
-
-        public Lens(Function<A, B> get, Function<Tuple<A, B>, A> set) {
-            this.get = get;
-            this.set = set;
-        }
-
-        @Override
-        public B apply(A whole) {
-            return get.apply(whole);
-        }
-        
-        public A updated(A whole, B part) {
-            return set.apply(new Tuple<A, B>(whole, part));
-        }
-        
-        public A mod(A a, Function<B, B> f) {
-            return set.apply(new Tuple<A, B>(a, f.apply(apply(a))));
-        }
-        
-        public <C> Lens<A, C> andThen(Lens<B, C> that) {
-            return that.compose(this);
-        }
-        
-        public <C> Lens<C, B> compose(final Lens<C, A> that) {
-            return new Lens<C, B>(new Function<C, B>() {
-                @Override
-                public B apply(C c) {
-                    return get.apply(that.get.apply(c));
-                }
-            }, new Function<Tuple<C, B>, C>() {
-                @Override
-                public C apply(final Tuple<C, B> t) {
-                    return that.mod(t._1, new Function<A, A>() {
-                        @Override
-                        public A apply(A a) {
-                            return set.apply(new Tuple<A, B>(a, t._2));
-                        }
-                    });
-                }
-            });            
-        }
-    }
 
     public static class Tuple<A, B> implements Serializable {
 
