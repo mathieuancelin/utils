@@ -62,15 +62,6 @@ public class Lenses {
             });
         }
         
-        public <C> State<A, B> mods(F.Function<B, B> f) {
-            return State.state(new F.Function<A, F.Tuple<A, B>>() {
-                @Override
-                public F.Tuple<A, B> apply(A t) {
-                    throw new UnsupportedOperationException("Not supported yet.");
-                }
-            });
-        } 
-        
         public State<A, F.Unit> change(final B b) {
             return State.state(new F.Function<A, F.Tuple<A, F.Unit>>() {
                 @Override

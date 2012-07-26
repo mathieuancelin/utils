@@ -21,6 +21,7 @@ import cx.ath.mancel01.utils.Concurrent.Promise;
 import cx.ath.mancel01.utils.F;
 import cx.ath.mancel01.utils.F.F2;
 import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.M;
 import cx.ath.mancel01.utils.SimpleLogger;
 import java.io.Serializable;
 import java.util.Iterator;
@@ -46,6 +47,8 @@ public class Actors {
         void tell(Object message);
         
         void tell(Object message, Actor from);
+        
+        <T> Promise<T> ask(Object message);
     }
     
     public final static Effect CONTINUE = new Effect() {
@@ -133,6 +136,10 @@ public class Actors {
             public void tell(Object message, Actor from) { tell(message); }
 
             @Override
+            public Promise<Object> ask(Object message) {
+                return Promise.pure(new Object());
+            }
+            @Override
             public String id() { return "SINK"; }
 
             @Override
@@ -141,6 +148,8 @@ public class Actors {
     };
     
     public static enum Poison { PILL }
+    
+    public static enum Failure { FAIL }
 
     private static class ActorImpl extends AtomicBoolean implements Actor, Runnable {
 
@@ -165,6 +174,32 @@ public class Actors {
                     }
                 }
             };
+        }
+
+        @Override
+        public <T> Promise<T> ask(Object message) {
+            final String promiseActorName =  UUID.randomUUID().toString();
+            final Promise<T> promise = new Promise<T>();
+            promise.onRedeem(new F.Action<Promise<T>>() {
+                @Override
+                public void apply(Promise<T> t) {
+                    ctx.scheduleOnce(1, TimeUnit.SECONDS, new Runnable() {
+                        @Override
+                        public void run() {
+                            ((CreationnalContextImpl) ctx).actors.remove(promiseActorName);
+                        }
+                    });
+                }
+            });
+            Actor promiseActor = ctx.create(new Behavior() {
+                @Override
+                public Effect apply(Object a, Context b) {
+                    promise.apply((T) a);
+                    return Actors.DIE;
+                }
+            }, promiseActorName);
+            tell(message, promiseActor);
+            return promise;
         }
 
         @Override
@@ -361,6 +396,10 @@ public class Actors {
         public CreationnalContextImpl(String id, ExecutorService service) {
             this.id = id;
             this.service = service;
+        }
+
+        ConcurrentHashMap<String, Actor> getActors() {
+            return actors;
         }
         
         @Override

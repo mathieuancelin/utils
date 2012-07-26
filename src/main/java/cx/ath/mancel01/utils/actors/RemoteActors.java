@@ -17,6 +17,8 @@
 
 package cx.ath.mancel01.utils.actors;
 
+import cx.ath.mancel01.utils.Concurrent;
+import cx.ath.mancel01.utils.F;
 import cx.ath.mancel01.utils.actors.Actors.Actor;
 import cx.ath.mancel01.utils.actors.Actors.ActorContext;
 import cx.ath.mancel01.utils.actors.Actors.CreationnalContextImpl;
@@ -130,6 +132,32 @@ public class RemoteActors {
         @Override
         public boolean buzy() {
             return false; // TODO : find a better way
+        }
+        
+        @Override
+        public <T> Concurrent.Promise<T> ask(Object message) {
+            final String promiseActorName =  UUID.randomUUID().toString();
+            final Concurrent.Promise<T> promise = new Concurrent.Promise<T>();
+            promise.onRedeem(new F.Action<Concurrent.Promise<T>>() {
+                @Override
+                public void apply(Concurrent.Promise<T> t) {
+                    ctx.scheduleOnce(1, TimeUnit.SECONDS, new Runnable() {
+                        @Override
+                        public void run() {
+                            ((CreationnalContextImpl) ctx).getActors().remove(promiseActorName);
+                        }
+                    });
+                }
+            });
+            Actor promiseActor = ctx.create(new Actors.Behavior() {
+                @Override
+                public Actors.Effect apply(Object a, Actors.Context b) {
+                    promise.apply((T) a);
+                    return Actors.DIE;
+                }
+            }, promiseActorName);
+            tell(message, promiseActor);
+            return promise;
         }
 
         @Override
