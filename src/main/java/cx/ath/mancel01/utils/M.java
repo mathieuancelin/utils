@@ -278,6 +278,13 @@ public final class M {
         return Option.none();
     }
     
+    public static <K> Option<K> caseObjEquals(Object a, K b) {
+        if (a.equals(b)) {
+            return Option.some(b);
+        }
+        return Option.none();
+    }
+    
     public static Option<String> caseStringEquals(Object o, String value) {
         for (String s : caseClassOf(String.class, o)) {
             if (s.equals(value)) {

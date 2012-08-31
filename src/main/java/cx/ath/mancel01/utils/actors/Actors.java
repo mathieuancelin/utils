@@ -21,9 +21,11 @@ import cx.ath.mancel01.utils.Concurrent.Promise;
 import cx.ath.mancel01.utils.F;
 import cx.ath.mancel01.utils.F.F2;
 import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.F.Unit;
 import cx.ath.mancel01.utils.M;
 import cx.ath.mancel01.utils.SimpleLogger;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -260,6 +262,38 @@ public class Actors {
         }
     }
     
+    public static class LoadBalancerActor implements Behavior {
+        
+        private final LoadBalancer balancer;
+        
+        public static LoadBalancerActor apply(ActorContext system, long number, Function<Unit, ? extends Behavior> of) {
+            if (number > 0) {
+                List<Actor> workers = new ArrayList<Actor>();
+                for (long i = 0; i < number; i++) {
+                    Behavior b = of.apply(Unit.unit());
+                    workers.add(system.create(b, b.getClass().getSimpleName() + "__" + i));
+                } 
+                return new Actors.LoadBalancerActor(workers);
+            } else {
+                throw new RuntimeException("You can't submit 0");
+            }
+        }
+        
+        public LoadBalancerActor(List<Actor> actors) {
+            this.balancer = new LoadBalancer(actors);
+        }
+
+        @Override
+        public Effect apply(Object evt, Context ctx) {
+            for (Broadcast b : M.caseClassOf(Broadcast.class, evt)) {
+                balancer.tell(b);
+                return Actors.CONTINUE;
+            }
+            balancer.tell(evt, ctx.from);
+            return Actors.CONTINUE;
+        }
+    }
+    
     public static class LoadBalancer implements Serializable {
 
         private final List<Actor> actors;
@@ -307,6 +341,21 @@ public class Actors {
             for (Actor actor : actors) {
                 actor.tell(message, from);
             }
+        }
+    }
+    
+    public static class BroadcasterActor implements Behavior {
+        
+        private final Broadcaster broadcaster;
+        
+        public BroadcasterActor(List<Actor> actors) {
+            this.broadcaster = new Broadcaster(actors);
+        }
+
+        @Override
+        public Effect apply(Object evt, Context ctx) {
+            broadcaster.tell(evt, ctx.from);
+            return Actors.CONTINUE;
         }
     }
         
@@ -365,15 +414,15 @@ public class Actors {
         
         <T> Promise<T> now(F.Callable<T> callable);
 
-        void schedule(long every, TimeUnit unit, Runnable runnable);
+        ScheduledFuture<?> schedule(long every, TimeUnit unit, Runnable runnable);
 
-        void schedule(long every, TimeUnit unit, final Actor actor, final Object message);
+        ScheduledFuture<?> schedule(long every, TimeUnit unit, final Actor actor, final Object message);
 
-        void scheduleOnce(long in, TimeUnit unit, Runnable runnable);
+        ScheduledFuture<?> scheduleOnce(long in, TimeUnit unit, Runnable runnable);
         
         <T> Promise<T>  scheduleOnce(long in, TimeUnit unit, F.Callable<T> callable);
 
-        void scheduleOnce(long in, TimeUnit unit, final Actor actor, final Object message);
+        ScheduledFuture<?> scheduleOnce(long in, TimeUnit unit, final Actor actor, final Object message);
     }
     
     static class CreationnalContextImpl implements ActorContext {
@@ -453,8 +502,8 @@ public class Actors {
         }
         
         @Override
-        public void scheduleOnce(long in, TimeUnit unit, final Actor actor, final Object message) {
-            scheduler.schedule(new Runnable() {
+        public ScheduledFuture<?> scheduleOnce(long in, TimeUnit unit, final Actor actor, final Object message) {
+            return scheduler.schedule(new Runnable() {
                 @Override
                 public void run() {
                     actor.tell(message);
@@ -463,13 +512,13 @@ public class Actors {
         }
         
         @Override
-        public void scheduleOnce(long in, TimeUnit unit, Runnable runnable) {
-            scheduler.schedule(runnable, in, unit);
+        public ScheduledFuture<?> scheduleOnce(long in, TimeUnit unit, Runnable runnable) {
+            return scheduler.schedule(runnable, in, unit);
         }
         
         @Override
-        public void schedule(long every, TimeUnit unit, final Actor actor, final Object message) {
-            scheduler.scheduleWithFixedDelay(new Runnable() {
+        public ScheduledFuture<?> schedule(long every, TimeUnit unit, final Actor actor, final Object message) {
+            return scheduler.scheduleWithFixedDelay(new Runnable() {
                 @Override
                 public void run() {
                     actor.tell(message);
@@ -478,8 +527,8 @@ public class Actors {
         }
         
         @Override
-        public void schedule(long every, TimeUnit unit, Runnable runnable) {
-            scheduler.scheduleWithFixedDelay(runnable, 0L, every, unit);
+        public ScheduledFuture<?> schedule(long every, TimeUnit unit, Runnable runnable) {
+            return scheduler.scheduleWithFixedDelay(runnable, 0L, every, unit);
         }
 
         @Override
