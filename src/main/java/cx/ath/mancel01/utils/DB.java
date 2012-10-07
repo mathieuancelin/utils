@@ -71,6 +71,60 @@ public final class DB {
         return new Pair(key, value);
     }
     
+    public static SQLParser<Long> longParser(final String name) {
+        return parser(Long.class, get(Long.class, name)).map(new Function<TypedContainer, Long>() {
+            @Override
+            public Long apply(TypedContainer t) {
+                return t.lng(name);
+            }
+        });
+    }
+    
+    public static SQLParser<Integer> integerParser(final String name) {
+        return parser(Integer.class, get(Integer.class, name)).map(new Function<TypedContainer, Integer>() {
+            @Override
+            public Integer apply(TypedContainer t) {
+                return t.intgr(name);
+            }
+        });
+    }
+    
+    public static SQLParser<Double> doubleParser(final String name) {
+        return parser(Double.class, get(Double.class, name)).map(new Function<TypedContainer, Double>() {
+            @Override
+            public Double apply(TypedContainer t) {
+                return t.dbl(name);
+            }
+        });
+    }
+    
+    public static SQLParser<Date> dateParser(final String name) {
+        return parser(Date.class, get(Date.class, name)).map(new Function<TypedContainer, Date>() {
+            @Override
+            public Date apply(TypedContainer t) {
+                return t.date(name);
+            }
+        });
+    }
+    
+    public static SQLParser<String> StringParser(final String name) {
+        return parser(String.class, get(String.class, name)).map(new Function<TypedContainer, String>() {
+            @Override
+            public String apply(TypedContainer t) {
+                return t.str(name);
+            }
+        });
+    }
+    
+    public static SQLParser<Boolean> booleanParser(final String name) {
+        return parser(Boolean.class, get(Boolean.class, name)).map(new Function<TypedContainer, Boolean>() {
+            @Override
+            public Boolean apply(TypedContainer t) {
+                return t.bool(name);
+            }
+        });
+    }
+    
     public static interface ConnectionProvider {
         public Connection get();
         public void beforeRequest();

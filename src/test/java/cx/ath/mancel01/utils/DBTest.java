@@ -45,18 +45,22 @@ public class DBTest {
                 return Unit.unit();
             }
         });
+        
         setParser( Person.personParser );
         Assert.assertEquals(3, Person.findAll().size());
         Assert.assertEquals(1, Person.findAllBetween(18, 80).size());
         Assert.assertEquals(2, Person.findAllBetween(18, 100).size());
         Assert.assertEquals(2, Person.findAllBetween(10, 80).size());
         Assert.assertEquals(3, Person.findAllBetween(10, 100).size());
+        
         setParser( Person.personParserRefl );
         Assert.assertEquals(3, Person.findAll().size());
         Assert.assertEquals(1, Person.findAllBetween(18, 80).size());
         Assert.assertEquals(2, Person.findAllBetween(18, 100).size());
         Assert.assertEquals(2, Person.findAllBetween(10, 80).size());
         Assert.assertEquals(3, Person.findAllBetween(10, 100).size());
+        
+        Assert.assertEquals(3, Person.count());
     }
     
     public static SQLParser<Person> parser;
@@ -127,6 +131,16 @@ public class DBTest {
             this.email = email;
         }
 
+        public static int count() {
+            return DB.withConnection(new Function<Connection, Integer>() {
+                @Override
+                public Integer apply(Connection _) {
+                    return sql(_, "select count(*) as p from persons")
+                            .asSingleOpt(integerParser("p")).getOrElse(0);
+                }
+            });
+        }
+        
         public static List<Person> findAll() {
             return DB.withConnection(new Function<Connection, List<Person>>() {
                 @Override
