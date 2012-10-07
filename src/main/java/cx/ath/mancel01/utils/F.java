@@ -81,10 +81,14 @@ public final class F {
         <R> Option<R> map(Function<T, R> function);
 
         Option<T> map(Action<T> function);
+        
+        Option<T> map(Callable<T> function);
 
         <R> Option<R> map(CheckedFunction<T, R> function);
 
         Option<T> map(CheckedAction<T> function);
+        
+        Option<T> map(CheckedCallable<T> function);
         
         Option<T> flatMap(Callable<Option<T>> action);
 
@@ -94,9 +98,9 @@ public final class F {
 
         Option<T> flatMap(CheckedFunction<T, Option<T>> action);
 
-        Option<T> bind(Action<Option<T>> action);
+        /**Option<T> bind(Action<Option<T>> action);
 
-        Option<T> bind(CheckedAction<Option<T>> action);
+        Option<T> bind(CheckedAction<Option<T>> action);**/
     }
 
     public static abstract class Option<T> implements Iterable<T>, Monad<T>, Serializable {
@@ -174,6 +178,15 @@ public final class F {
         }
 
         @Override
+        public Option<T> map(Callable<T> function) {
+            if (isDefined()) {
+                return Option.maybe(function.apply());
+                //return Option.maybe(get());
+            }
+            return Option.none();
+        }
+        
+        @Override
         public Option<T> map(Action<T> function) {
             if (isDefined()) {
                 function.apply(get());
@@ -195,6 +208,19 @@ public final class F {
         }
 
         @Override
+        public Option<T> map(CheckedCallable<T> function) {
+            if (isDefined()) {
+                try {
+                    return Option.maybe(function.apply());
+                    //return Option.maybe(get());
+                } catch (Throwable t) {
+                    return Option.none();
+                }
+            }
+            return Option.none();
+        }
+        
+        @Override
         public Option<T> map(CheckedAction<T> function) {
             if (isDefined()) {
                 try {
@@ -207,7 +233,7 @@ public final class F {
             return Option.none();
         }
 
-        @Override
+        /**@Override
         public Option<T> bind(Action<Option<T>> action) {
             if (isDefined()) {
                 action.apply(this);
@@ -227,7 +253,7 @@ public final class F {
                 }
             }
             return Option.none();
-        }
+        }**/
         
         @Override
         public Option<T> flatMap(Callable<Option<T>> action) {
@@ -287,6 +313,10 @@ public final class F {
             } else {
                 return Option.some(value);
             }
+        }
+        
+        public static <T> Option<T> unit(T value) {
+            return apply(value);
         }
     }
 

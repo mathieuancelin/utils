@@ -15,20 +15,73 @@
  *  under the License.
  */
 
-
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.F.ExceptionWrapper;
 import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.F.Unit;
 import cx.ath.mancel01.utils.actors.Actors;
 import cx.ath.mancel01.utils.actors.Actors.ActorContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
 
 public class Concurrent {
+    
+    public static class PromiseCountDownLatch extends CountDownLatch {
+
+        private List<Function<PromiseCountDownLatch, Unit>> callbacks = 
+                Collections.synchronizedList(new ArrayList<Function<PromiseCountDownLatch, Unit>>());
+
+        private final int initialCount;
+        
+        public PromiseCountDownLatch(int i) {
+            super(i);
+            initialCount = i;
+        }
+        
+        public int getInitial() {
+            return initialCount;
+        }
+        
+        @Override
+        public void countDown() {
+            super.countDown();
+            synchronized (this) {
+                if (!isReedemed()) {
+                    for (Function<PromiseCountDownLatch, Unit> callback : callbacks) {
+                        callback.apply(this);
+                    }
+                }
+            }
+        }
+        
+        public void onRedeem(Function<PromiseCountDownLatch, Unit> callback) {
+            synchronized (this) {
+                if (!isReedemed()) {
+                    callbacks.add(callback);
+                }
+            }
+            if (isReedemed()) {
+                callback.apply(this);
+            }
+        }
+        
+        public boolean isReedemed() {
+            synchronized (this) {
+                return getCount() == 0;
+            }
+        }
+        
+        @Override
+        public String toString() {
+            return "PromiseCountDownLatch-[ " + getCount() + " / " + getInitial() + " ]";
+        }        
+    }
+    
 
     public static class Promise<V> implements Future<V>, F.Action<V> {
 
