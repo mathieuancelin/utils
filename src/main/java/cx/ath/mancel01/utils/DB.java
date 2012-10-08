@@ -12,6 +12,9 @@ import java.util.regex.Pattern;
 
 public final class DB {
     
+    private static final ThreadLocal<ConnectionProvider> currentConnectionProvider =
+            new ThreadLocal<ConnectionProvider>();
+    
     private final ConnectionProvider provider;
     
     private DB(ConnectionProvider provider) {
@@ -28,6 +31,7 @@ public final class DB {
     }
     
     public final <T> T withConnection(Function<Connection, T> action) {
+        currentConnectionProvider.set(provider);
         provider.beforeRequest();
         try {
             SimpleLogger.trace("Connecting to database");
@@ -41,6 +45,7 @@ public final class DB {
         } finally  {
             SimpleLogger.trace("Close connection");
             provider.afterRequest();
+            currentConnectionProvider.remove();
         }
     }
     
@@ -61,6 +66,18 @@ public final class DB {
     
     public static SQLStatement sql(Connection connection, String query) {
         return new SQLStatement(connection, query);
+    }
+    
+    public static SQLStatement sql(String query) {
+        return new SQLStatement(DB.currentConnectionProvider.get().get(), query);
+    }
+    
+    public static SQLStatement SQL(Connection connection, String query) {
+        return new SQLStatement(connection, query);
+    }
+    
+    public static SQLStatement SQL(String query) {
+        return new SQLStatement(DB.currentConnectionProvider.get().get(), query);
     }
    
     public static <T> Extractor<T> get(Class<T> clazz, String name) {

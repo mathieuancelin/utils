@@ -17,8 +17,8 @@ public class DBTest {
         DB.withConnection(new Function<Connection, Unit>() {
             @Override
             public Unit apply(Connection _) {
-                sql(_, "drop table if exists persons;").executeUpdate();
-                sql(_, 
+                SQL("drop table if exists persons;").executeUpdate();
+                SQL( 
                     "create table persons (\n" + 
                     "ID                    bigint not null,\n" + 
                     "name                  varchar(1000) not null,\n" + 
@@ -30,15 +30,15 @@ public class DBTest {
                     "constraint pk_person  primary key (id))\n" +
                     ";"
                 ).executeUpdate();
-                sql(_, "insert into persons values ( {id}, {name}, {surname}, {age}, {cell}, {address}, {email} );" )
+                SQL("insert into persons values ( {id}, {name}, {surname}, {age}, {cell}, {address}, {email} );" )
                     .on(pair("id", 1), pair("name", "John"), pair("surname", "Doe"), 
                         pair("age", 42), pair("cell", "0606060606"), pair("address", "Here"), 
                         pair("email", "john.doe@gmail.com")).executeUpdate();
-                sql(_, "insert into persons values ( {id}, {name}, {surname}, {age}, {cell}, {address}, {email} );" )
+                SQL("insert into persons values ( {id}, {name}, {surname}, {age}, {cell}, {address}, {email} );" )
                     .on(pair("id", 2), pair("name", "John"), pair("surname", "Doe"), 
                         pair("age", 16), pair("cell", "0606060606"), pair("address", "Here"), 
                         pair("email", "john.doe@gmail.com")).executeUpdate();
-                sql(_, "insert into persons values ( {id}, {name}, {surname}, {age}, {cell}, {address}, {email} );" )
+                SQL("insert into persons values ( {id}, {name}, {surname}, {age}, {cell}, {address}, {email} );" )
                     .on(pair("id", 3), pair("name", "John"), pair("surname", "Doe"), 
                         pair("age", 90), pair("cell", "0606060606"), pair("address", "Here"), 
                         pair("email", "john.doe@gmail.com")).executeUpdate();
@@ -135,7 +135,7 @@ public class DBTest {
             return DB.withConnection(new Function<Connection, Integer>() {
                 @Override
                 public Integer apply(Connection _) {
-                    return sql(_, "select count(*) as p from persons")
+                    return SQL("select count(*) as p from persons")
                             .asSingleOpt(integerParser("p")).getOrElse(0);
                 }
             });
@@ -146,7 +146,7 @@ public class DBTest {
                 @Override
                 public List<Person> apply(Connection _) {
                     return 
-                        sql(_, "SELECT id, name, surname, age, cell, address, email FROM Persons")
+                        SQL("SELECT id, name, surname, age, cell, address, email FROM Persons")
                             .asList( getParser() );
                 }
             });
