@@ -1,5 +1,6 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.C.EnhancedList;
 import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Option;
 import cx.ath.mancel01.utils.F.Tuple;
@@ -64,6 +65,11 @@ public final class DB {
         return new SQLParser<T>(clazz, opt, Arrays.asList(extractors));
     }
     
+    public static <T> SQLParser<T> parser(final Class<T> clazz, final List<Extractor<?>> extractors) {
+        Option<Function<TypedContainer, T>> opt = Option.none();
+        return new SQLParser<T>(clazz, opt, extractors);
+    }
+    
     public static SQLStatement sql(Connection connection, String query) {
         return new SQLStatement(connection, query);
     }
@@ -81,7 +87,7 @@ public final class DB {
     }
    
     public static <T> Extractor<T> get(Class<T> clazz, String name) {
-        return new Extractor<T>(clazz, name);
+        return new Extractor<T>(clazz, name, false);
     }
     
     public static Pair pair(String key, Object value) {
@@ -438,13 +444,15 @@ public final class DB {
 
         private final Class<?> type;
         private final String name;
+        private final boolean opt;
 
-        Extractor(Class<?> type, String name) {
+        Extractor(Class<?> type, String name, boolean opt) {
             this.type = type;
             this.name = name;
+            this.opt = opt;
         }
 
-        public final T extract(ResultSet rs, int index) throws Exception {
+        public T extract(ResultSet rs, int index) throws Exception {
             if (type.equals(String.class)) {
                 return (T) rs.getString(index);
             }
@@ -465,6 +473,145 @@ public final class DB {
             }
             return (T) rs.getObject(index);
         }
+
+        public String name() {
+            return name;
+        }
+    }
+    
+    public static abstract class Table<T extends Data.Identifiable<Long>> {
+        public String tableName;
+        public Class<T> clazz;
+        public String selectAllStatement;
+        public String selectByIdStatement;
+        public String createStatement;
+        public String deleteAllStatement;
+        public String deleteStatement;
+        public String updateStatement;
+        public String countStatement;
+        
+        private List<Extractor<?>> extractors;
+        private SQLParser<T> parser;
+        
+        public <A extends Table<T>> A init(Class<T> clazz, String tableName) {
+            this.tableName = tableName;
+            this.clazz = clazz;
+            this.extractors = all().extractors;
+            this.parser = DB.parser(clazz, extractors).mapWithFieldsReflection();
+            System.out.println(extractors);
+            selectAllStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
+                @Override
+                public String apply(Extractor<?> t) {
+                    return t.name();
+                }
+            }).mkString("select ", ", ", " from " + tableName);
+            selectByIdStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
+                @Override
+                public String apply(Extractor<?> t) {
+                    return t.name();
+                }
+            }).mkString("select ", ", ", " from " + tableName + " where id = {id}");
+            deleteAllStatement = "delete from " + tableName;
+            deleteStatement = "delete from " + tableName + " where id = {id}";
+            createStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
+                @Override
+                public String apply(Extractor<?> t) {
+                    return t.name();
+                }
+            }).mkString("insert into " + tableName + "(", ", ", " values ({values})");
+            updateStatement = "update " + tableName + " set {values} where id = {id}";
+            countStatement = "select count(*) as c from " + tableName;
+            return (A) this;
+        }
+        
+        public abstract ExtractorSeq all();
+        
+        public static ExtractorSeq seq(Extractor<?>... extractors) {
+            return new ExtractorSeq(Arrays.asList(extractors));
+        }
+        
+        public static class ExtractorSeq {
+            private List<Extractor<?>> extractors = new ArrayList<Extractor<?>>();
+            public ExtractorSeq(List<Extractor<?>> extractors) {
+                this.extractors.addAll(extractors);
+            }
+            public ExtractorSeq _(Extractor<?>... extractors) {
+                this.extractors.addAll(Arrays.asList(extractors));
+                return this;
+            }
+        }
+        
+        public EnhancedList<T> findAll() { 
+           return C.eList(DB.SQL(selectAllStatement).asList(parser)); 
+        }
+
+        public Option<T> findById(Long id) {
+            return DB.SQL(selectByIdStatement).on(pair("id", id)).asSingleOpt(parser); 
+        } 
+    
+        public T save(T model) {
+            if (findById( model.getId() ).isDefined()) {
+                return update( model );
+            } else {
+                return create( model );
+            }
+        }
+        
+        public T create(T model) {
+            String sql = createStatement.replace("{values}", C.eList(values(model)).map(new Function<Pair, String>() {
+                @Override
+                public String apply(Pair t) {
+                    return t.key;
+                }
+            }).mkString(", "));
+            sql(sql).executeUpdate();
+            return findById(model.getId()).get();
+        }
+        
+        private List<Pair> values(T model) {
+            List<Pair> ret = new ArrayList<Pair>();
+            Set<Field> fields = new HashSet<Field>(Arrays.asList(clazz.getDeclaredFields()));
+            fields.addAll(Arrays.asList(clazz.getFields()));
+            for (Field field : fields) {
+                field.setAccessible(true);
+                for (Extractor e : extractors) {
+                    if (e.name().toLowerCase().equals(field.getName().toLowerCase())) {
+                        try {
+                            ret.add(pair(e.name(), field.get(model)));
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            }
+            return ret;
+        }
+
+        public void delete(Long id) { 
+            sql(deleteStatement).executeUpdate();
+        }
+
+        public void deleteAll() {
+            sql(deleteAllStatement).executeUpdate();
+        }
+
+        public T update(T model) {
+            String sql = updateStatement.replace("{values}", C.eList(values(model)).map(new Function<Pair, String>() {
+                @Override
+                public String apply(Pair t) {
+                    return t.key + " = " + t.value;
+                }
+            }).mkString(", "));
+            sql(sql).on(pair("id", model.getId())).executeUpdate();
+            return findById(model.getId()).get();
+        }
+
+        public int count(){ 
+            return sql(countStatement).asSingleOpt(DB.integerParser("c")).get();
+        }
+
+        public boolean exists(Long id) { return findById( id ).isDefined(); }
+        public boolean exists(T model) { return findById( model.getId() ).isDefined(); }
     }
     
     public static class TypedContainer {
