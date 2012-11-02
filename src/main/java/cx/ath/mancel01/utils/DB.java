@@ -478,10 +478,112 @@ public final class DB {
         public String name() {
             return name;
         }
+        
+        public Predicate equal(String equal) {
+            return new Predicate("t." + name + " = '" + equal + "'");
+        }
+        public Predicate equal(int equal) {
+            return new Predicate("t." + name + " = " + equal);
+        }
+        public Predicate equal(double equal) {
+            return new Predicate("t." + name + " = " + equal);
+        }
+        public Predicate equal(long equal) {
+            return new Predicate("t." + name + " = " + equal);
+        }
+        public Predicate equal(Extractor<?> extractor) {
+            return new Predicate("t." + name + " = t." + extractor.name);
+        }
+        public Predicate notEqual(String not) {
+            return new Predicate("t." + name + " != '" + not + "'");
+        }
+        public Predicate notEqual(int not) {
+            return new Predicate("t." + name + " != " + not);
+        }
+        public Predicate notEqual(long not) {
+            return new Predicate("t." + name + " != " + not);
+        }
+        public Predicate notEqual(double not) {
+            return new Predicate("t." + name + " != " + not);
+        }
+        public Predicate notEqual(Extractor<?> not) {
+            return new Predicate("t." + name + " != t." + not.name);
+        }
+        public Predicate greaterThan(String greater) {
+            return new Predicate("t." + name + " > '" + greater + "'");
+        }
+        public Predicate greaterThan(int greater) {
+            return new Predicate("t." + name + " > " + greater);
+        }
+        public Predicate greaterThan(long greater) {
+            return new Predicate("t." + name + " > " + greater);
+        }
+        public Predicate greaterThan(double greater) {
+            return new Predicate("t." + name + " > " + greater);
+        }
+        public Predicate greaterThan(Extractor<?> greater) {
+            return new Predicate("t." + name + " > t." + greater.name);
+        }
+        public Predicate lesserThan(String lesser) {
+            return new Predicate("t." + name + " < '" + lesser + "'");
+        }
+        public Predicate lesserThan(int lesser) {
+            return new Predicate("t." + name + " < " + lesser);
+        }
+        public Predicate lesserThan(double lesser) {
+            return new Predicate("t." + name + " < " + lesser);
+        }
+        public Predicate lesserThan(long lesser) {
+            return new Predicate("t." + name + " < " + lesser);
+        }
+        public Predicate lesserThan(Extractor<?> lesser) {
+            return new Predicate("t." + name + " < t." + lesser.name);
+        }
+        public Predicate greaterEqThan(String greater) {
+            return new Predicate("t." + name + " >= '" + greater + "'");
+        }
+        public Predicate greaterEqThan(int greater) {
+            return new Predicate("t." + name + " >= " + greater);
+        }
+        public Predicate greaterEqThan(double greater) {
+            return new Predicate("t." + name + " >= " + greater);
+        }
+        public Predicate greaterEqThan(long greater) {
+            return new Predicate("t." + name + " >= " + greater);
+        }
+        public Predicate greaterEqThan(Extractor<?> greater) {
+            return new Predicate("t." + name + " >= t." + greater.name);
+        }
+        public Predicate lesserEqThan(String lesser) {
+            return new Predicate("t." + name + " <= '" + lesser + "'");
+        }
+        public Predicate lesserEqThan(int lesser) {
+            return new Predicate("t." + name + " <= " + lesser);
+        }
+        public Predicate lesserEqThan(double lesser) {
+            return new Predicate("t." + name + " <= " + lesser);
+        }
+        public Predicate lesserEqThan(long lesser) {
+            return new Predicate("t." + name + " <= " + lesser);
+        }
+        public Predicate lesserEqThan(Extractor<?> lesser) {
+            return new Predicate("t." + name + " <= t." + lesser.name);
+        }
+        public Predicate like(String like) {
+            return new Predicate("t." + name + " like '" + like + "'");
+        }
+        public Predicate between(int from, int to) {
+            return new Predicate("t." + name + " between " + from + " and " + to);
+        }
+        public Predicate between(double from, double to) {
+            return new Predicate("t." + name + " between " + from + " and " + to);
+        }
+        public Predicate between(long from, long to) {
+            return new Predicate("t." + name + " between " + from + " and " + to);
+        }
     }
     
-    public static abstract class Model implements Identifiable<Long> {
-    }
+    public static abstract class Model implements Identifiable<Long> { }
     
     public static abstract class Table<T extends Identifiable<Long>> {
         public String tableName;
@@ -512,21 +614,21 @@ public final class DB {
             selectAllStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
                 @Override
                 public String apply(Extractor<?> t) {
-                    return t.name();
+                    return "t." + t.name();
                 }
-            }).mkString("select ", ", ", " from " + tableName);
+            }).mkString("select ", ", ", " from " + tableName + " t");
             findWhereStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
                 @Override
                 public String apply(Extractor<?> t) {
-                    return t.name();
+                    return "t." + t.name();
                 }
             }).mkString("select ", ", ", " from " + tableName + " t where {predicate}");
             selectByIdStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
                 @Override
                 public String apply(Extractor<?> t) {
-                    return t.name();
+                    return "t." + t.name();
                 }
-            }).mkString("select ", ", ", " from " + tableName + " where id = {id}");
+            }).mkString("select ", ", ", " from " + tableName + " t where t.id = {id}");
             deleteAllStatement = "delete from " + tableName;
             deleteStatement = "delete from " + tableName + " where id = {id}";
             createStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
@@ -541,7 +643,7 @@ public final class DB {
         }
         
         public abstract ExtractorSeq<T> all();
-        
+                
         public static ExtractorSeq seq(Extractor<?>... extractors) {
             return new ExtractorSeq(Arrays.asList(extractors));
         }
@@ -641,6 +743,127 @@ public final class DB {
 
         public boolean exists(Long id) { return findById( id ).isDefined(); }
         public boolean exists(T model) { return findById( model.getId() ).isDefined(); }
+        
+        public Query<T> filter(Predicate predicate) {
+            return new Query<T>(this, predicate); 
+        }
+        
+        public Query<T> orderByAsc(Extractor<?> extractor) {
+            Query<T> q = new Query<T>(this, null);
+            q.asc = true;
+            q.orderCol = extractor.name;
+            return q;
+        }
+        
+        public Query<T> orderByDesc(Extractor<?> extractor) {
+            Query<T> q = new Query<T>(this, null);
+            q.asc = false;
+            q.orderCol = extractor.name;
+            return q;
+        }
+        
+        public Query<T> drop(int drop) {
+            Query<T> q = new Query<T>(this, null);
+            q.drop = drop;
+            return q;
+        }
+        
+        public Query<T> take(int take) {
+            Query<T> q = new Query<T>(this, null);
+            q.take = take;
+            return q;
+        }
+        
+        public void insertAll(T... objs) {
+            for (T obj : Arrays.asList(objs)) {
+                save(obj);
+            }
+        }
+    }
+    
+    public static class Predicate {
+        private String sql;
+        Predicate(String start) {
+            this.sql = start;
+        }
+        
+        public Predicate and(Predicate predicate) {
+            sql = sql + " and (" + predicate.toSql() + ")";
+            return this;
+        }
+        
+        public Predicate or(Predicate predicate) {
+            sql = sql + " or (" + predicate.toSql() + ")";
+            return this;
+        }
+        
+        String toSql() {
+            return sql;
+        }
+    }
+    
+    public static class Query<Q extends Identifiable<Long>> {
+        
+        private int take = -1;
+        private int drop = -1;
+        private boolean asc = true;
+        private String orderCol = null;
+        private final Predicate predicate;
+        private Table<Q> table;
+
+        Query(Table<Q> table, Predicate predicate) {
+            this.predicate = predicate;
+            this.table = table;
+        }
+                
+        public Query orderByAsc(Extractor<?> extractor) {
+           this.asc = true;
+           this.orderCol = extractor.name;
+           return this;
+        }
+        
+        public Query orderByDesc(Extractor<?> extractor) {
+           this.asc = false;
+           this.orderCol = extractor.name;
+           return this; 
+        }
+        
+        public Query drop(int drop) {
+            this.drop = drop;
+            return this;
+        }
+        
+        public Query take(int take) {
+            this.take = take;
+            return this;
+        }
+        
+        public EnhancedList<Q> list() {
+            return table.findWhere(toSql());
+        }
+        
+        String toSql() {
+            StringBuilder builder = new StringBuilder();
+            if (predicate != null) {
+                builder.append(predicate.toSql());
+            }
+            if (orderCol != null) {
+                if (asc) 
+                    builder.append("order by ").append(orderCol).append(" asc");
+                else 
+                    builder.append("order by ").append(orderCol).append(" desc");
+            }
+            if (drop > -1) {
+                builder.append(" limit ").append(drop);
+            }
+            if (drop > -1 && take > -1) {
+                builder.append(", ").append(take);
+            }
+            if (take > -1) {
+                builder.append(" limit 0, ").append(take);
+            }
+            return builder.toString();
+        }
     }
     
     public static class TypedContainer {

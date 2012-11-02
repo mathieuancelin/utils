@@ -69,10 +69,10 @@ public class DBTest {
             @Override
             public Unit apply(Connection _) {
                 Assert.assertEquals(3, Persons._.findAll().size());
-                Assert.assertEquals(1, Persons._.findAllBetween(18, 80).size());
-                Assert.assertEquals(2, Persons._.findAllBetween(18, 100).size());
-                Assert.assertEquals(2, Persons._.findAllBetween(10, 80).size());
-                Assert.assertEquals(3, Persons._.findAllBetween(10, 100).size());
+                Assert.assertEquals(1, Persons.findAllBetween(18, 80).size());
+                Assert.assertEquals(2, Persons.findAllBetween(18, 100).size());
+                Assert.assertEquals(2, Persons.findAllBetween(10, 80).size());
+                Assert.assertEquals(3, Persons.findAllBetween(10, 100).size());
                 Assert.assertEquals(3, Persons._.count());
                 Persons._.deleteAll();
                 Assert.assertEquals(0, Persons._.count());
@@ -212,8 +212,8 @@ public class DBTest {
         @Override
         public ExtractorSeq<Person> all() { return seq(id, name, surname, age, cell, address, email); }
         
-        public EnhancedList<Person> findAllBetween(final int low, final int high) {
-            return findWhere("age between {low} and {high}", pair("low", low), pair("high", high));
+        public static EnhancedList<Person> findAllBetween(int low, int high) {
+            return _.filter( _.age.between(low, high) ).list();
         }
     }
 }
