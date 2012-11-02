@@ -595,6 +595,7 @@ public final class DB {
         public String deleteStatement;
         public String updateStatement;
         public String countStatement;
+        public String ddlDelete;
         private String findWhereStatement;
         
         private List<Extractor<?>> extractors;
@@ -636,9 +637,10 @@ public final class DB {
                 public String apply(Extractor<?> t) {
                     return t.name();
                 }
-            }).mkString("insert into " + tableName + "(", ", ", " values ({values})");
+            }).mkString("insert into " + tableName + "(", ", ", ") values ({values})");
             updateStatement = "update " + tableName + " set {values} where id = {id}";
             countStatement = "select count(*) as c from " + tableName;
+            ddlDelete = "drop table if exists " + tableName + ";";
             return (A) this;
         }
         
@@ -662,6 +664,10 @@ public final class DB {
                 map = Option.apply(block);
                 return this;
             }
+        }
+        
+        public void ddlDelete() {
+            sql(ddlDelete).executeUpdate();
         }
         
         public EnhancedList<T> findAll() { 
@@ -692,7 +698,22 @@ public final class DB {
             String sql = createStatement.replace("{values}", C.eList(values(model)).map(new Function<Pair, String>() {
                 @Override
                 public String apply(Pair t) {
-                    return t.key;
+                    if (t.value.getClass().equals(String.class)) {
+                        return "'" + t.value.toString() + "'";
+                    }
+                    if (t.value.getClass().equals(Integer.class)) {
+                        return t.value.toString();
+                    }
+                    if (t.value.getClass().equals(Long.class)) {
+                        return t.value.toString();
+                    }
+                    if (t.value.getClass().equals(Double.class)) {
+                        return t.value.toString();
+                    }
+                    if (t.value.getClass().equals(Boolean.class)) {
+                        return ((Boolean) t.value) ? "TRUE" : "FALSE";
+                    }
+                    return "'" + t.value.toString() + "'";
                 }
             }).mkString(", "));
             sql(sql).executeUpdate();
@@ -703,9 +724,9 @@ public final class DB {
             List<Pair> ret = new ArrayList<Pair>();
             Set<Field> fields = new HashSet<Field>(Arrays.asList(clazz.getDeclaredFields()));
             fields.addAll(Arrays.asList(clazz.getFields()));
-            for (Field field : fields) {
-                field.setAccessible(true);
-                for (Extractor e : extractors) {
+            for (Extractor e : extractors) {
+                for (Field field : fields) {
+                    field.setAccessible(true);
                     if (e.name().toLowerCase().equals(field.getName().toLowerCase())) {
                         try {
                             ret.add(pair(e.name(), field.get(model)));
@@ -730,7 +751,22 @@ public final class DB {
             String sql = updateStatement.replace("{values}", C.eList(values(model)).map(new Function<Pair, String>() {
                 @Override
                 public String apply(Pair t) {
-                    return t.key + " = " + t.value;
+                    if (t.value.getClass().equals(String.class)) {
+                        return t.key + " = " + "'" + t.value.toString() + "'";
+                    }
+                    if (t.value.getClass().equals(Integer.class)) {
+                        return t.key + " = " + t.value.toString();
+                    }
+                    if (t.value.getClass().equals(Long.class)) {
+                        return t.key + " = " + t.value.toString();
+                    }
+                    if (t.value.getClass().equals(Double.class)) {
+                        return t.key + " = " + t.value.toString();
+                    }
+                    if (t.value.getClass().equals(Boolean.class)) {
+                        return t.key + " = " + (((Boolean) t.value) ? "TRUE" : "FALSE");
+                    }
+                    return t.key + " = " + "'" + t.value.toString() + "'";
                 }
             }).mkString(", "));
             sql(sql).on(pair("id", model.getId())).executeUpdate();

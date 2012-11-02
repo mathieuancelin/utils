@@ -1,10 +1,7 @@
 package cx.ath.mancel01.utils;
 
-import cx.ath.mancel01.utils.C.EnhancedList;
 import static cx.ath.mancel01.utils.DB.*;
-import cx.ath.mancel01.utils.Data.Identifiable;
 import cx.ath.mancel01.utils.F.Function;
-import cx.ath.mancel01.utils.F.Tuple;
 import cx.ath.mancel01.utils.F.Unit;
 import java.sql.Connection;
 import java.util.*;
@@ -64,21 +61,6 @@ public class DBTest {
         Assert.assertEquals(3, Person.findAllBetween(10, 100).size());
         
         Assert.assertEquals(3, Person.count());
-        
-        DB.withConnection(new Function<Connection, Unit>() {
-            @Override
-            public Unit apply(Connection _) {
-                Assert.assertEquals(3, Persons._.findAll().size());
-                Assert.assertEquals(1, Persons.findAllBetween(18, 80).size());
-                Assert.assertEquals(2, Persons.findAllBetween(18, 100).size());
-                Assert.assertEquals(2, Persons.findAllBetween(10, 80).size());
-                Assert.assertEquals(3, Persons.findAllBetween(10, 100).size());
-                Assert.assertEquals(3, Persons._.count());
-                Persons._.deleteAll();
-                Assert.assertEquals(0, Persons._.count());
-                return Unit.unit();
-            }
-        });
     }
     
     public static SQLParser<Person> parser;
@@ -194,26 +176,6 @@ public class DBTest {
         @Override
         public Long getId() {
             return id;
-        }
-    }
-
-    public static class Persons extends Table<Person> {
-        
-        public final Extractor<Long> id = get(Long.class, "id");
-        public final Extractor<String> name = get(String.class, "name");
-        public final Extractor<String> surname = get(String.class, "surname");
-        public final Extractor<Long> age = get(Long.class, "age");
-        public final Extractor<String> cell = get(String.class, "cell");
-        public final Extractor<String> address = get(String.class, "address");
-        public final Extractor<String> email = get(String.class, "email");
-
-        public static final Persons _ = new Persons().init(Person.class, "persons");
-
-        @Override
-        public ExtractorSeq<Person> all() { return seq(id, name, surname, age, cell, address, email); }
-        
-        public static EnhancedList<Person> findAllBetween(int low, int high) {
-            return _.filter( _.age.between(low, high) ).list();
         }
     }
 }
