@@ -1,6 +1,7 @@
 package cx.ath.mancel01.utils;
 
 import cx.ath.mancel01.utils.C.EnhancedList;
+import cx.ath.mancel01.utils.Data.Identifiable;
 import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Option;
 import cx.ath.mancel01.utils.F.Tuple;
@@ -479,7 +480,10 @@ public final class DB {
         }
     }
     
-    public static abstract class Table<T extends Data.Identifiable<Long>> {
+    public static abstract class Model implements Identifiable<Long> {
+    }
+    
+    public static abstract class Table<T extends Identifiable<Long>> {
         public String tableName;
         public Class<T> clazz;
         public String selectAllStatement;
@@ -489,6 +493,7 @@ public final class DB {
         public String deleteStatement;
         public String updateStatement;
         public String countStatement;
+        private String findWhereStatement;
         
         private List<Extractor<?>> extractors;
         private SQLParser<T> parser;
@@ -497,7 +502,12 @@ public final class DB {
             this.tableName = tableName;
             this.clazz = clazz;
             this.extractors = all().extractors;
-            this.parser = DB.parser(clazz, extractors).mapWithFieldsReflection();
+            ExtractorSeq<T> extr = all();
+            if (extr.map.isDefined()) {
+                this.parser = DB.parser(clazz, extractors).map(extr.map.get());
+            } else {
+                this.parser = DB.parser(clazz, extractors).mapWithFieldsReflection();
+            }
             System.out.println(extractors);
             selectAllStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
                 @Override
@@ -505,6 +515,12 @@ public final class DB {
                     return t.name();
                 }
             }).mkString("select ", ", ", " from " + tableName);
+            findWhereStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
+                @Override
+                public String apply(Extractor<?> t) {
+                    return t.name();
+                }
+            }).mkString("select ", ", ", " from " + tableName + " t where {predicate}");
             selectByIdStatement = C.eList(extractors).map(new Function<Extractor<?>, String>() {
                 @Override
                 public String apply(Extractor<?> t) {
@@ -524,14 +540,15 @@ public final class DB {
             return (A) this;
         }
         
-        public abstract ExtractorSeq all();
+        public abstract ExtractorSeq<T> all();
         
         public static ExtractorSeq seq(Extractor<?>... extractors) {
             return new ExtractorSeq(Arrays.asList(extractors));
         }
         
-        public static class ExtractorSeq {
+        public static class ExtractorSeq<T> {
             private List<Extractor<?>> extractors = new ArrayList<Extractor<?>>();
+            private Option<Function<TypedContainer, T>> map = Option.none();
             public ExtractorSeq(List<Extractor<?>> extractors) {
                 this.extractors.addAll(extractors);
             }
@@ -539,10 +556,22 @@ public final class DB {
                 this.extractors.addAll(Arrays.asList(extractors));
                 return this;
             }
+            public ExtractorSeq map(Function<TypedContainer, T> block) {
+                map = Option.apply(block);
+                return this;
+            }
         }
         
         public EnhancedList<T> findAll() { 
            return C.eList(DB.SQL(selectAllStatement).asList(parser)); 
+        }
+        
+        public EnhancedList<T> findWhere(String predicate, Pair... params) {
+            return C.eList(DB.sql(findWhereStatement.replace("{predicate}", predicate)).on(params).asList(parser));
+        }
+        
+        public EnhancedList<T> find(String sql, Pair... params) {
+            return C.eList(DB.sql(sql).on(params).asList(parser));
         }
 
         public Option<T> findById(Long id) {

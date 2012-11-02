@@ -1,8 +1,10 @@
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.C.EnhancedList;
 import static cx.ath.mancel01.utils.DB.*;
 import cx.ath.mancel01.utils.Data.Identifiable;
 import cx.ath.mancel01.utils.F.Function;
+import cx.ath.mancel01.utils.F.Tuple;
 import cx.ath.mancel01.utils.F.Unit;
 import java.sql.Connection;
 import java.util.*;
@@ -91,7 +93,7 @@ public class DBTest {
     
     public static final DB DB = DB(provider(new Driver(), "jdbc:h2:/tmp/test", "sa", ""));
      
-    public static class Person implements Identifiable<Long> {
+    public static class Person extends Model {
 
         public Long id;
         public String name;
@@ -208,12 +210,10 @@ public class DBTest {
         public static final Persons _ = new Persons().init(Person.class, "persons");
 
         @Override
-        public ExtractorSeq all() { return seq(id)._(name)._(surname)._(age)._(cell)._(address)._(email); }
+        public ExtractorSeq<Person> all() { return seq(id, name, surname, age, cell, address, email); }
         
-        public List<Person> findAllBetween(final int low, final int high) {
-            return sql("SELECT id, name, surname, age, cell, address, email " +
-                "FROM Persons WHERE age > {low} AND age < {high}")
-                    .on( pair("low", low), pair("high", high) ).asList( parser );
+        public EnhancedList<Person> findAllBetween(final int low, final int high) {
+            return findWhere("age between {low} and {high}", pair("low", low), pair("high", high));
         }
     }
 }
