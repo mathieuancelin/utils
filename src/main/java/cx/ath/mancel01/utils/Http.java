@@ -17,14 +17,13 @@
 
 package cx.ath.mancel01.utils;
 
+import cx.ath.mancel01.utils.Concurrent.Promise;
 import cx.ath.mancel01.utils.F.Action;
-import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Tuple;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,9 +82,11 @@ public class Http {
             @Override
             public ChannelPipeline getPipeline() {
                 ChannelPipeline pipeline = Channels.pipeline();
-                pipeline.addLast("decoder", new HttpRequestDecoder());
+                pipeline.addLast("decoder", new HttpRequestDecoder(4096, 8192, 8192));
                 pipeline.addLast("encoder", new HttpResponseEncoder());
                 pipeline.addLast("handler", new HttpRequestHandler());
+                pipeline.addLast("compressor", new HttpContentCompressor());
+                pipeline.addLast("decompressor", new HttpContentDecompressor());
                 return pipeline;
             }
         });
@@ -265,13 +266,54 @@ public class Http {
             this.channel = channel;
             this.keepAlive = keepAlive;
         }
-
-        public Response write(Buffer chunk) {
-            return write(chunk.toChannelBuffer());
+        
+        public void async(Promise promise) {
+            promise.onRedeem(new Action<Promise>() {
+                @Override
+                public void apply(Promise t) {
+                    try {
+                        Object o = t.get();
+                        for (String message : M.caseClassOf(String.class, o)) {
+                            writeString(message, "utf-8").end();
+                        }
+                        for (Buffer message : M.caseClassOf(Buffer.class, o)) {
+                            writeBuffer(message).end();
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
         }
 
-        public Response write(String chunk, String enc) {
-            return write(Buffer.fromString(chunk, enc).toChannelBuffer());
+        public Response writeBuffer(Buffer chunk) {
+            return writeResponse(chunk.toChannelBuffer());
+        }
+
+        public Response writeString(String chunk, String enc) {
+            return writeResponse(Buffer.fromString(chunk, enc).toChannelBuffer());
+        }
+        
+        public Response header(String key, String value) {
+            headers.put(key, value);
+            return this;
+        }
+        
+        public Response satus(int status) {
+            this.statusCode = status;
+            return this;
+        }
+        
+        public void write(Buffer chunk) {
+            Promise<Buffer> p = new Promise<Buffer>();
+            async(p);
+            p.apply(chunk);
+        }
+
+        public void write(String content) {
+            Promise<String> p = new Promise<String>();
+            async(p);
+            p.apply(content);
         }
 
         public void end() {
@@ -280,7 +322,7 @@ public class Http {
             }
         }
 
-        private Response write(ChannelBuffer chunk) {
+        private Response writeResponse(ChannelBuffer chunk) {
             if (!headWritten) {
                 org.jboss.netty.handler.codec.http.HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
                 response.setContent(chunk);

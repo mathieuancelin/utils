@@ -18,7 +18,9 @@
 package cx.ath.mancel01.utils.actors;
 
 import cx.ath.mancel01.utils.Concurrent;
+import cx.ath.mancel01.utils.Concurrent.Promise;
 import cx.ath.mancel01.utils.F;
+import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.actors.Actors.Actor;
 import cx.ath.mancel01.utils.actors.Actors.ActorContext;
 import cx.ath.mancel01.utils.actors.Actors.CreationnalContextImpl;
@@ -26,10 +28,8 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.*;
@@ -48,6 +48,24 @@ public class RemoteActors {
         String remoteHost;
         String remotePort;
         Object toMsg;
+    }
+    
+    private static class IsActorBusy implements Serializable {
+        String toName;
+        String toCtx;
+        String remoteFrom;
+        String remoteCtx;
+        String remoteHost;
+        String remotePort;
+        Long id;
+    }
+    
+    private static class ActorBusy implements Serializable {
+        Long id;
+    }
+    
+    private static class ActorNotBusy implements Serializable {
+        Long id;
     }
     
     public static class RemoteActor extends SimpleChannelUpstreamHandler implements Actor {
@@ -129,9 +147,42 @@ public class RemoteActors {
             return id();
         }
         
+        private static ConcurrentHashMap<Long, Promise<Object>> waitingForResponse = 
+                new ConcurrentHashMap<Long, Promise<Object>>();
+        
+        private static AtomicLong ids = new AtomicLong(0);
+        
         @Override
-        public boolean buzy() {
-            return false; // TODO : find a better way
+        public Future<Boolean> buzy() {
+            try {             
+                IsActorBusy message = new IsActorBusy();
+                message.toName = name;
+                message.toCtx = context;
+                message.remoteCtx = ctx.id;
+                message.remoteHost = ctx.host;
+                message.remotePort = ctx.port;
+                if (ids.get() == Long.MAX_VALUE) {
+                    ids.set(0);
+                }
+                message.id = ids.incrementAndGet();
+                channel.awaitUninterruptibly().getChannel().write(message);
+                Promise<Object> promise = new Promise<Object>();
+                return promise.map(new Function<Object, Boolean>() {
+                    @Override
+                    public Boolean apply(Object t) {
+                        if (t instanceof ActorBusy) {
+                            return true;
+                        }
+                        if (t instanceof ActorNotBusy) {
+                            return false;
+                        }
+                        return false;
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                return Promise.pure(false);
+            }
         }
         
         @Override
@@ -194,6 +245,35 @@ public class RemoteActors {
                         Actors.Sink.INSTANCE.tell(message.toMsg, from);
                     }
                 } catch (Exception ex) {
+                }
+            }
+            if (e.getMessage() instanceof IsActorBusy) {
+                IsActorBusy message = (IsActorBusy) e.getMessage();
+                Actor from = RemoteActor.ref(message.toCtx, "buzy", 
+                        message.remoteHost, Integer.valueOf(message.remotePort), context);
+                try {
+                    Actor target = context.lookup(message.toName);
+                    if (target != null) {
+                        boolean b = target.buzy().get();
+                        if (b) {
+                            ActorBusy busy = new ActorBusy();
+                            busy.id = message.id;
+                            from.tell(busy);
+                        }
+                    }
+                } catch (Exception ex) {
+                }
+            }
+            if (e.getMessage() instanceof ActorBusy) {
+                Promise<Object> p = RemoteActor.waitingForResponse.get(((ActorBusy) e.getMessage()).id);
+                if (p!=null) {
+                    p.apply(e.getMessage());
+                }
+            }
+            if (e.getMessage() instanceof ActorNotBusy) {
+                Promise<Object> p = RemoteActor.waitingForResponse.get(((ActorNotBusy) e.getMessage()).id);
+                if (p!=null) {
+                    p.apply(e.getMessage());
                 }
             }
         }

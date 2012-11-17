@@ -2,6 +2,7 @@ package cx.ath.mancel01.utils.actors;
 
 import cx.ath.mancel01.utils.F.Function;
 import cx.ath.mancel01.utils.F.Unit;
+import cx.ath.mancel01.utils.SimpleLogger;
 import cx.ath.mancel01.utils.actors.Actors.Actor;
 import cx.ath.mancel01.utils.actors.Actors.ActorContext;
 import cx.ath.mancel01.utils.actors.Actors.Behavior;
@@ -25,6 +26,7 @@ public class TenMillionTest {
     
     @Test
     public void testTenMillions() throws Exception {
+        SimpleLogger.enableTrace(false);
         startedTime = System.currentTimeMillis();
         system = Actors.newContext("LoadGeneratorApp");
         final Actor appManager = system.create(new JobControllerActor(nbrOfWorkers), "jobController");
@@ -37,7 +39,9 @@ public class TenMillionTest {
         generateLoad();
         latch.await();
         router.tell(new Broadcast(Poison.PILL));
+        router.tell(Poison.PILL);
         appManager.tell(Poison.PILL);
+        SimpleLogger.enableTrace(true);
     }
 
     private void generateLoad() {

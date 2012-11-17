@@ -44,7 +44,7 @@ public class Actors {
         
         String id();
         
-        boolean buzy();
+        Future<Boolean> buzy();
 
         void tell(Object message);
         
@@ -145,7 +145,7 @@ public class Actors {
             public String id() { return "SINK"; }
 
             @Override
-            public boolean buzy() { return false; }
+            public Future<Boolean> buzy() { return Promise.pure(false); }
         }
     };
     
@@ -257,8 +257,8 @@ public class Actors {
         }
 
         @Override
-        public boolean buzy() {
-            return get();
+        public Future<Boolean> buzy() {
+            return Promise.pure(get());
         }
     }
     
@@ -320,13 +320,14 @@ public class Actors {
             if (!it.hasNext()) {
                 it = actors.iterator();
             }
+            try {
             Actor a = it.next();
-            if (!a.buzy()) {
+            if (!a.buzy().get()) {
                 a.tell(msg, from);
             } else {
                 boolean sent = false;
                 for (Actor bis : actors) {
-                    if (!bis.buzy()) {
+                    if (!bis.buzy().get()) {
                         a.tell(msg, from);
                         sent = true;
                     }
@@ -335,6 +336,7 @@ public class Actors {
                     a.tell(msg, from);
                 }
             }
+            } catch (Exception e) { e.printStackTrace(); }
         }
 
         private void broadcast(Object message, Actor from) {
